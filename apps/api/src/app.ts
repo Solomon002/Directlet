@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { healthResponseSchema } from "@tenora/shared";
+import { healthResponseSchema } from "@directlet/shared";
 
 export const app = express();
 
@@ -10,7 +10,7 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   const body = healthResponseSchema.parse({
     status: "ok",
-    service: "tenora-api",
+    service: "directlet-api",
   });
   res.json(body);
 });

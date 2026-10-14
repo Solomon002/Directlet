@@ -3,3 +3,7 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: true
+  workerd: true
+permissions:
+  workerd:
+    skills: true
