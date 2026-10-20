@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  LANDLORD
+  TENANT
+}
+
+enum RentFrequency {
+  MONTHLY
+  QUARTERLY
+  BIANNUAL
+  ANNUAL
+}
+
+enum TenancyStatus {
+  ACTIVE
+  ENDED
+}
+
+// ---------- Models ----------
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  passwordHash    String?
+  googleId        String?   @unique
+  role            UserRole
+  fullName        String
+  phone           String?
+  emailVerifiedAt DateTime?
+  idDocumentPath  String?
+  inviteToken     String?   @unique
+  inviteExpiresAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  properties Property[]
+  tenancies  Tenancy[]
+  paymentsRecorded  Payment[] @relation("PaymentRecordedBy")
+  paymentsConfirmed Payment[] @relation("PaymentConfirmedBy")
+  complaintsRaised Complaint[]
+  auditLogs        AuditLog[]
+}
+
+model Property {
+  id          String   @id @default(uuid()) @db.Uuid
+  landlordId  String   @db.Uuid
+  name        String
+  address     String
+  area        String
+  city        String
+  state       String
+  description String?
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  landlord User   @relation(fields: [landlordId], references: [id])
+  units    Unit[]
+
+  @@index([landlordId])
+  @@index([city, area])
+}
+
+// Unit status (vacant/occupied) is derived from tenancies, never stored.
+model Unit {
+  id            String        @id @default(uuid()) @db.Uuid
+  propertyId    String        @db.Uuid
+  label         String
+  bedrooms      Int
+  bathrooms     Int?
+  rentAmount    Decimal       @db.Decimal(14, 2)
+  rentFrequency RentFrequency @default(ANNUAL)
+  description   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  property  Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenancies Tenancy[]
+    inspectionRequests InspectionRequest[]
+
+  @@unique([propertyId, label])
+  @@index([propertyId])
+}
+
+// Rent amount and frequency are snapshotted here when the tenancy is created.
+model Tenancy {
+  id              String        @id @default(uuid()) @db.Uuid
+  unitId          String        @db.Uuid
+  tenantId        String        @db.Uuid
+  rentAmount      Decimal       @db.Decimal(14, 2)
+  rentFrequency   RentFrequency
+  startDate       DateTime      @db.Date
+  rentExpiryDate  DateTime?     @db.Date
+  status          TenancyStatus @default(ACTIVE)
+  endedAt         DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  unit   Unit @relation(fields: [unitId], references: [id])
+  tenant User @relation(fields: [tenantId], references: [id])
+  rentCharges RentCharge[]
+  payments    Payment[]
+  complaints         Complaint[]
+  inspectionRequest  InspectionRequest?
+
+  @@index([unitId])
+  @@index([tenantId])
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CASH
+  OTHER
+}
+
+// What is owed for one rent period. Charge status (paid/part-paid/overdue)
+// is derived from amountPaid and dueDate, never stored.
+model RentCharge {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenancyId   String   @db.Uuid
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  dueDate     DateTime @db.Date
+  amount      Decimal  @db.Decimal(14, 2)
+  // Denormalized: always recomputed by the same service that manages allocations.
+  amountPaid  Decimal  @default(0) @db.Decimal(14, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenancy     Tenancy             @relation(fields: [tenancyId], references: [id], onDelete: Cascade)
+  allocations PaymentAllocation[]
+
+  @@unique([tenancyId, periodStart])
+  @@index([tenancyId])
+  @@index([dueDate])
+}
+
+// Money the tenant says they paid. Not tied to a single charge.
+model Payment {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenancyId       String        @db.Uuid
+  amount          Decimal       @db.Decimal(14, 2)
+  method          PaymentMethod @default(BANK_TRANSFER)
+  paidAt          DateTime
+  reference       String?
+  proofPath       String?
+  status          PaymentStatus @default(PENDING)
+  recordedById    String        @db.Uuid
+  confirmedById   String?       @db.Uuid
+  confirmedAt     DateTime?
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tenancy     Tenancy             @relation(fields: [tenancyId], references: [id])
+  recordedBy  User                @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+  confirmedBy User?               @relation("PaymentConfirmedBy", fields: [confirmedById], references: [id])
+  allocations PaymentAllocation[]
+  receipt     Receipt?
+
+  @@index([tenancyId])
+  @@index([status])
+}
+
+// Links a payment to the charges it covers (one payment can cover several).
+model PaymentAllocation {
+  id           String   @id @default(uuid()) @db.Uuid
+  paymentId    String   @db.Uuid
+  rentChargeId String   @db.Uuid
+  amount       Decimal  @db.Decimal(14, 2)
+  createdAt    DateTime @default(now())
+
+  payment    Payment    @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  rentCharge RentCharge @relation(fields: [rentChargeId], references: [id])
+
+  @@unique([paymentId, rentChargeId])
+  @@index([rentChargeId])
+}
+
+// One receipt per confirmed payment. The PDF is regenerated on request.
+model Receipt {
+  id            String   @id @default(uuid()) @db.Uuid
+  paymentId     String   @unique @db.Uuid
+  receiptNumber String   @unique
+  issuedAt      DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+}
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum InspectionStatus {
+  PENDING
+  SCHEDULED
+  COMPLETED
+  DECLINED
+  CONVERTED
+}
+
+// Raised by a tenant, managed by the landlord.
+model Complaint {
+  id           String          @id @default(uuid()) @db.Uuid
+  tenancyId    String          @db.Uuid
+  raisedById   String          @db.Uuid
+  title        String
+  description  String
+  status       ComplaintStatus @default(OPEN)
+  landlordNote String?
+  resolvedAt   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  tenancy  Tenancy @relation(fields: [tenancyId], references: [id], onDelete: Cascade)
+  raisedBy User    @relation(fields: [raisedById], references: [id])
+
+  @@index([tenancyId])
+  @@index([status])
+}
+
+// Submitted by a public visitor, so there is no user account behind it.
+// convertedTenancyId is set when the landlord turns the request into a tenancy.
+model InspectionRequest {
+  id                 String           @id @default(uuid()) @db.Uuid
+  unitId             String           @db.Uuid
+  name               String
+  email              String
+  phone              String
+  message            String?
+  preferredDate      DateTime?
+  scheduledFor       DateTime?
+  status             InspectionStatus @default(PENDING)
+  landlordNote       String?
+  convertedTenancyId String?          @unique @db.Uuid
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  unit             Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  convertedTenancy Tenancy? @relation(fields: [convertedTenancyId], references: [id])
+
+  @@index([unitId])
+  @@index([status])
+}
+
+// Written by middleware on every state-changing request, never by hand.
+// userId is optional because public requests have no logged-in user.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  method     String
+  path       String
+  statusCode Int
+  entity     String?
+  entityId   String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+}

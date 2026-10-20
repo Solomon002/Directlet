@@ -2,7 +2,9 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  "@prisma/engines": true
   esbuild: true
+  prisma: true
   workerd: true
 permissions:
   workerd:

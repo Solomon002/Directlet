@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-trust-blue: #174A9D;
+  --color-direct-green: #1DB954;
+  --color-night-blue: #0B295B;
+  --color-mist: #E3E8F0;
+  --color-ink: #020B06;
+
+  --font-display: "Plus Jakarta Sans Variable", system-ui, sans-serif;
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
