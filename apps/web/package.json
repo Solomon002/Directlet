@@ -13,9 +13,12 @@
     "@directlet/shared": "workspace:*",
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
+    "axios": "^1.20.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-router": "^8.4.0"
+    "react-router": "^8.4.0",
+    "react-router-dom": "^7.18.4",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
