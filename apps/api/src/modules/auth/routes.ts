@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { registerSchema, loginSchema } from "@directlet/shared";
 import { validate } from "../../middleware/validate";
+import { requireTrustedOrigin } from "../../middleware/requireTrustedOrigin";
 import {
   registerRateLimiter,
   loginIpRateLimiter,
@@ -29,4 +30,16 @@ authRouter.post(
   asyncHandler(authController.login),
 );
 
-authRouter.post("/refresh", refreshRateLimiter, asyncHandler(authController.refresh));
+authRouter.post(
+  "/refresh",
+  refreshRateLimiter,
+  requireTrustedOrigin,
+  asyncHandler(authController.refresh),
+);
+
+authRouter.post(
+  "/logout",
+  refreshRateLimiter,
+  requireTrustedOrigin,
+  asyncHandler(authController.logout),
+);

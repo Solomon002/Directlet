@@ -49,6 +49,7 @@ model User {
   paymentsConfirmed Payment[] @relation("PaymentConfirmedBy")
   complaintsRaised Complaint[]
   auditLogs        AuditLog[]
+  refreshTokens     RefreshToken[]
 }
 
 model Property {
@@ -277,4 +278,21 @@ model AuditLog {
 
   @@index([userId])
   @@index([createdAt])
+}
+// One row per refresh token issued. The row id is the token jti.
+// Tokens are single-use: using one revokes it and issues the next in the same family.
+// Presenting a revoked token means it was copied, so the whole family is revoked.
+model RefreshToken {
+  id        String    @id @db.Uuid
+  userId    String    @db.Uuid
+  familyId  String    @db.Uuid
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
 }

@@ -3,7 +3,12 @@ import { prisma } from "../../lib/prisma";
 import { hashPassword, comparePassword } from "../../lib/password";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../../lib/jwt";
 import { AppError } from "../../utils/AppError";
+import type { UserRole } from "../../generated/prisma/enums";
 import type { RegisterInput, LoginInput } from "@directlet/shared";
+
+// A used refresh token that comes back within this window is treated as a network
+// retry. After it, a replayed token is treated as theft.
+const REUSE_GRACE_MS = 10 * 1000;
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -16,6 +21,10 @@ function toAuthUser(user: {
   role: "LANDLORD" | "TENANT";
 }) {
   return { id: user.id, email: user.email, fullName: user.fullName, role: user.role };
+}
+
+function unauthenticated() {
+  return new AppError(401, "Invalid or expired session", "UNAUTHENTICATED");
 }
 
 // A real hash of a random value, built once. Login compares against it when the
@@ -35,12 +44,34 @@ function isUniqueViolation(error: unknown) {
   );
 }
 
+// Saves a new refresh token row and returns both tokens. The row id is the token jti.
+async function issueTokens(user: { id: string; role: UserRole }, familyId: string = randomUUID()) {
+  const jti = randomUUID();
+  const payload = { sub: user.id, role: user.role };
+  const refresh = signRefreshToken(payload, jti);
+
+  await prisma.refreshToken.create({
+    data: { id: jti, userId: user.id, familyId, expiresAt: refresh.expiresAt },
+  });
+
+  return {
+    accessToken: signAccessToken(payload),
+    refreshToken: refresh.token,
+    refreshExpiresAt: refresh.expiresAt,
+  };
+}
+
+// Deletes every token in a family. A deleted token cannot be mistaken for a retry.
+async function deleteFamily(familyId: string) {
+  await prisma.refreshToken.deleteMany({ where: { familyId } });
+}
+
 export async function registerLandlord(input: RegisterInput) {
   const email = normalizeEmail(input.email);
   const passwordHash = await hashPassword(input.password);
 
-  try {
-    const user = await prisma.user.create({
+  const user = await prisma.user
+    .create({
       data: {
         email,
         passwordHash,
@@ -48,20 +79,16 @@ export async function registerLandlord(input: RegisterInput) {
         phone: input.phone,
         role: "LANDLORD",
       },
+    })
+    .catch((error: unknown) => {
+      if (isUniqueViolation(error)) {
+        throw new AppError(409, "An account with this email already exists", "EMAIL_TAKEN");
+      }
+      throw error;
     });
 
-    const payload = { sub: user.id, role: user.role };
-    return {
-      user: toAuthUser(user),
-      accessToken: signAccessToken(payload),
-      refreshToken: signRefreshToken(payload),
-    };
-  } catch (error) {
-    if (isUniqueViolation(error)) {
-      throw new AppError(409, "An account with this email already exists", "EMAIL_TAKEN");
-    }
-    throw error;
-  }
+  const tokens = await issueTokens(user);
+  return { user: toAuthUser(user), ...tokens };
 }
 
 export async function login(input: LoginInput) {
@@ -77,31 +104,64 @@ export async function login(input: LoginInput) {
     throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
 
-  const payload = { sub: user.id, role: user.role };
-  return {
-    user: toAuthUser(user),
-    accessToken: signAccessToken(payload),
-    refreshToken: signRefreshToken(payload),
-  };
+  const tokens = await issueTokens(user);
+  return { user: toAuthUser(user), ...tokens };
 }
 
-export async function refreshTokens(token: string) {
-  let payload;
+export async function rotateRefreshToken(token: string) {
+  let verified;
   try {
-    payload = verifyRefreshToken(token);
+    verified = verifyRefreshToken(token);
   } catch {
-    throw new AppError(401, "Invalid or expired refresh token", "UNAUTHENTICATED");
+    throw unauthenticated();
+  }
+
+  const stored = await prisma.refreshToken.findUnique({ where: { id: verified.jti } });
+  if (!stored || stored.userId !== verified.sub) {
+    throw unauthenticated();
+  }
+
+  // A used token replayed after the grace window means it was copied: delete the family.
+  if (stored.revokedAt && Date.now() - stored.revokedAt.getTime() > REUSE_GRACE_MS) {
+    console.warn("Refresh token reuse detected, family deleted", {
+      userId: stored.userId,
+      familyId: stored.familyId,
+    });
+    await deleteFamily(stored.familyId);
+    throw unauthenticated();
+  }
+
+  if (stored.expiresAt.getTime() <= Date.now()) {
+    throw unauthenticated();
   }
 
   // The role always comes from the database, never from the token.
-  const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+  const user = await prisma.user.findUnique({ where: { id: stored.userId } });
   if (!user) {
-    throw new AppError(401, "Invalid or expired refresh token", "UNAUTHENTICATED");
+    throw unauthenticated();
   }
 
-  const newPayload = { sub: user.id, role: user.role };
-  return {
-    accessToken: signAccessToken(newPayload),
-    refreshToken: signRefreshToken(newPayload),
-  };
+  if (!stored.revokedAt) {
+    await prisma.refreshToken.updateMany({
+      where: { id: stored.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  const tokens = await issueTokens(user, stored.familyId);
+  return { user: toAuthUser(user), ...tokens };
+}
+
+export async function logout(token: string | undefined) {
+  if (!token) return;
+
+  try {
+    const verified = verifyRefreshToken(token);
+    const stored = await prisma.refreshToken.findUnique({ where: { id: verified.jti } });
+    if (stored && stored.userId === verified.sub) {
+      await deleteFamily(stored.familyId);
+    }
+  } catch {
+    // An invalid or expired token needs no cleanup. Logout always succeeds.
+  }
 }

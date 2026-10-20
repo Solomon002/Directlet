@@ -8,7 +8,7 @@ export type JwtPayload = {
   role: UserRole;
 };
 
-// A verified token also carries an id and expiry, needed later to revoke and rotate.
+// A verified token also carries an id and expiry, used to rotate and revoke.
 export type VerifiedToken = JwtPayload & { jti: string; exp: number };
 
 const ISSUER = "directlet-api";
@@ -16,12 +16,18 @@ const ALGORITHM = "HS256";
 
 type TokenType = "access" | "refresh";
 
-function sign(payload: JwtPayload, type: TokenType, secret: string, expiresIn: string): string {
+function sign(
+  payload: JwtPayload,
+  type: TokenType,
+  secret: string,
+  expiresIn: string,
+  jti: string,
+): string {
   return jwt.sign({ role: payload.role, typ: type }, secret, {
     subject: payload.sub,
     issuer: ISSUER,
     algorithm: ALGORITHM,
-    jwtid: randomUUID(),
+    jwtid: jti,
     expiresIn: expiresIn as jwt.SignOptions["expiresIn"],
   });
 }
@@ -45,11 +51,17 @@ function verify(token: string, type: TokenType, secret: string): VerifiedToken {
 }
 
 export function signAccessToken(payload: JwtPayload): string {
-  return sign(payload, "access", env.JWT_ACCESS_SECRET, env.JWT_ACCESS_EXPIRES_IN);
+  return sign(payload, "access", env.JWT_ACCESS_SECRET, env.JWT_ACCESS_EXPIRES_IN, randomUUID());
 }
 
-export function signRefreshToken(payload: JwtPayload): string {
-  return sign(payload, "refresh", env.JWT_REFRESH_SECRET, env.JWT_REFRESH_EXPIRES_IN);
+// The caller supplies the jti so it can be saved as the id of the database row.
+export function signRefreshToken(
+  payload: JwtPayload,
+  jti: string,
+): { token: string; expiresAt: Date } {
+  const token = sign(payload, "refresh", env.JWT_REFRESH_SECRET, env.JWT_REFRESH_EXPIRES_IN, jti);
+  const decoded = jwt.decode(token) as { exp: number };
+  return { token, expiresAt: new Date(decoded.exp * 1000) };
 }
 
 export function verifyAccessToken(token: string): JwtPayload {
