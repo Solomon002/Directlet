@@ -4,6 +4,7 @@ import helmet from "helmet";
 import { healthResponseSchema } from "@directlet/shared";
 import { env } from "./config/env";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler";
+import { authRouter } from "./modules/auth/routes";
 
 export const app = express();
 
@@ -19,6 +20,8 @@ app.get("/health", (_req, res) => {
   });
   res.json(body);
 });
+
+app.use("/auth", authRouter);
 
 // These two must stay last, after every route.
 app.use(notFoundHandler);

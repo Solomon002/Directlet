@@ -11,6 +11,10 @@ const envSchema = z.object({
       "must be a postgresql:// connection string",
     ),
   WEB_ORIGIN: z.url().default("http://localhost:5173"),
+  JWT_ACCESS_SECRET: z.string().min(32, "must be at least 32 characters"),
+  JWT_REFRESH_SECRET: z.string().min(32, "must be at least 32 characters"),
+  JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
+  JWT_REFRESH_EXPIRES_IN: z.string().default("30d"),
 });
 
 const parsed = envSchema.safeParse(process.env);
