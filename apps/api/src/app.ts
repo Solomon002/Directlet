@@ -7,10 +7,11 @@ import { healthResponseSchema } from "@directlet/shared";
 import { env } from "./config/env";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler";
 import { authRouter } from "./modules/auth/routes";
+import { propertiesRouter } from "./modules/properties/routes";
+import { publicRouter } from "./modules/public/routes";
 
 export const app = express();
 
-// Tokens must never be cached by a browser or a proxy.
 function noStore(_req: Request, res: Response, next: NextFunction) {
   res.setHeader("Cache-Control", "no-store");
   next();
@@ -31,7 +32,8 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/auth", noStore, authRouter);
+app.use("/properties", propertiesRouter);
+app.use("/public", publicRouter);
 
-// These two must stay last, after every route.
 app.use(notFoundHandler);
 app.use(errorHandler);
