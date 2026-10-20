@@ -1,28 +1,31 @@
-import { create } from 'zustand';
+import { create } from "zustand";
+
+export type UserRole = "LANDLORD" | "TENANT";
 
 export type User = {
   id: string;
   email: string;
   fullName: string;
-  role: 'landlord' | 'tenant';
+  role: UserRole;
 };
+
+// "checking" lasts until the first session check finishes, so the app does not
+// flash the login screen on page reload.
+type Status = "checking" | "authenticated" | "anonymous";
 
 type AuthState = {
   user: User | null;
-  token: string | null;
-  setAuth: (user: User, token: string) => void;
-  logout: () => void;
+  accessToken: string | null;
+  status: Status;
+  setSession: (user: User, accessToken: string) => void;
+  clearSession: () => void;
 };
 
+// Memory only. Nothing here is written to localStorage or sessionStorage.
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: localStorage.getItem('accessToken'),
-  setAuth: (user, token) => {
-    localStorage.setItem('accessToken', token);
-    set({ user, token });
-  },
-  logout: () => {
-    localStorage.removeItem('accessToken');
-    set({ user: null, token: null });
-  },
+  accessToken: null,
+  status: "checking",
+  setSession: (user, accessToken) => set({ user, accessToken, status: "authenticated" }),
+  clearSession: () => set({ user: null, accessToken: null, status: "anonymous" }),
 }));
