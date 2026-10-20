@@ -4,9 +4,13 @@ import LandlordLayout from "./layouts/LandlordLayout";
 import TenantLayout from "./layouts/TenantLayout";
 import ProtectedRoute from "./ProtectedRoute";
 import Home from "../pages/public/Home";
+import Browse from "../pages/public/Browse";
+import CompoundPage from "../pages/public/CompoundPage";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import Dashboard from "../pages/landlord/Dashboard";
+import Properties from "../pages/landlord/Properties";
+import PropertyDetail from "../pages/landlord/PropertyDetail";
 import TenantHome from "../pages/tenant/Home";
 
 export const router = createBrowserRouter([
@@ -16,6 +20,8 @@ export const router = createBrowserRouter([
       { path: "/", element: <Home /> },
       { path: "/login", element: <Login /> },
       { path: "/register", element: <Register /> },
+      { path: "/compounds", element: <Browse /> },
+      { path: "/compounds/:propertyId", element: <CompoundPage /> },
     ],
   },
   {
@@ -24,7 +30,11 @@ export const router = createBrowserRouter([
     children: [
       {
         element: <LandlordLayout />,
-        children: [{ index: true, element: <Dashboard /> }],
+        children: [
+          { index: true, element: <Dashboard /> },
+          { path: "properties", element: <Properties /> },
+          { path: "properties/:propertyId", element: <PropertyDetail /> },
+        ],
       },
     ],
   },

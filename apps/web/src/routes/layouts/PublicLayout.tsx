@@ -8,6 +8,7 @@ export default function PublicLayout() {
           DirectLet
         </Link>
         <nav className="flex gap-6 text-sm font-bold text-ink">
+          <Link to="/compounds">Browse</Link>
           <Link to="/login">Log in</Link>
           <Link to="/register">Sign up</Link>
         </nav>
