@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { AppError } from "../../utils/AppError";
+import { streamReceiptPdf } from "../../lib/pdf";
 import * as paymentService from "./service";
 
 function userId(req: Request): string {
@@ -41,4 +42,25 @@ export async function reject(req: Request, res: Response) {
     rejectionReason,
   );
   res.status(200).json({ payment });
+}
+
+export async function downloadReceipt(req: Request, res: Response) {
+  const payment = await paymentService.getReceiptForDownload(userId(req), req.params.paymentId as string);
+
+  streamReceiptPdf(res, {
+    receiptNumber: payment.receipt!.receiptNumber,
+    issuedAt: payment.receipt!.issuedAt,
+    tenantName: payment.tenancy.tenant.fullName,
+    propertyName: payment.tenancy.unit.property.name,
+    unitLabel: payment.tenancy.unit.label,
+    address: `${payment.tenancy.unit.property.address}, ${payment.tenancy.unit.property.area}, ${payment.tenancy.unit.property.city}`,
+    amount: payment.amount.toString(),
+    method: payment.method,
+    paidAt: payment.paidAt,
+    periods: payment.allocations.map((allocation) => ({
+      start: allocation.rentCharge.periodStart,
+      end: allocation.rentCharge.periodEnd,
+      amount: allocation.amount.toString(),
+    })),
+  });
 }

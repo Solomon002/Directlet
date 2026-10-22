@@ -155,3 +155,26 @@ export async function rejectPayment(landlordId: string, paymentId: string, rejec
     },
   });
 }
+
+export async function getReceiptForDownload(userId: string, paymentId: string) {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      id: paymentId,
+      OR: [
+        { tenancy: { tenantId: userId } },
+        { tenancy: { unit: { property: { landlordId: userId } } } },
+      ],
+    },
+    include: {
+      receipt: true,
+      tenancy: { include: { unit: { include: { property: true } }, tenant: true } },
+      allocations: { include: { rentCharge: true } },
+    },
+  });
+
+  if (!payment || !payment.receipt) {
+    throw new AppError(404, "Receipt not found", "NOT_FOUND");
+  }
+
+  return payment;
+}

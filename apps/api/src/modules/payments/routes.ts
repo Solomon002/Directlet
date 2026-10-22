@@ -17,3 +17,4 @@ paymentsRouter.post(
   validate(rejectPaymentSchema),
   asyncHandler(paymentController.reject),
 );
+paymentsRouter.get("/:paymentId/receipt", asyncHandler(paymentController.downloadReceipt));
