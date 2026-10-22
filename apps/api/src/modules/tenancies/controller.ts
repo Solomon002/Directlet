@@ -32,3 +32,8 @@ export async function end(req: Request, res: Response) {
   const tenancy = await tenancyService.endTenancy(landlordId(req), req.params.tenancyId as string);
   res.status(200).json({ tenancy });
 }
+
+export async function getMine(req: Request, res: Response) {
+  const tenancy = await tenancyService.getMyActiveTenancyAsTenant(req.user!.sub);
+  res.status(200).json({ tenancy });
+}

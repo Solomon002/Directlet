@@ -170,3 +170,19 @@ export async function endTenancy(landlordId: string, tenancyId: string) {
     data: { status: "ENDED", endedAt: new Date() },
   });
 }
+
+export async function getMyActiveTenancyAsTenant(tenantId: string) {
+  const tenancy = await prisma.tenancy.findFirst({
+    where: { tenantId, status: "ACTIVE" },
+    include: {
+      unit: { include: { property: true } },
+      rentCharges: { orderBy: { periodStart: "asc" } },
+    },
+  });
+
+  if (!tenancy) {
+    throw new AppError(404, "No active tenancy found", "NOT_FOUND");
+  }
+
+  return tenancy;
+}

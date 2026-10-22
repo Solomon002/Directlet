@@ -8,9 +8,19 @@ import * as tenancyController from "./controller";
 
 export const tenanciesRouter = Router();
 
-tenanciesRouter.use(authenticate, requireRole("LANDLORD"));
+tenanciesRouter.use(authenticate);
 
-tenanciesRouter.get("/", asyncHandler(tenancyController.list));
-tenanciesRouter.post("/", validate(createTenancySchema), asyncHandler(tenancyController.create));
-tenanciesRouter.get("/:tenancyId", asyncHandler(tenancyController.getOne));
-tenanciesRouter.post("/:tenancyId/end", asyncHandler(tenancyController.end));
+tenanciesRouter.get("/mine", requireRole("TENANT"), asyncHandler(tenancyController.getMine));
+tenanciesRouter.get("/", requireRole("LANDLORD"), asyncHandler(tenancyController.list));
+tenanciesRouter.post(
+  "/",
+  requireRole("LANDLORD"),
+  validate(createTenancySchema),
+  asyncHandler(tenancyController.create),
+);
+tenanciesRouter.get("/:tenancyId", requireRole("LANDLORD"), asyncHandler(tenancyController.getOne));
+tenanciesRouter.post(
+  "/:tenancyId/end",
+  requireRole("LANDLORD"),
+  asyncHandler(tenancyController.end),
+);

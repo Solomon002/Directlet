@@ -10,3 +10,4 @@ export * from "./schemas/auth";
 export * from "./schemas/property";
 export * from "./schemas/unit";
 export * from "./schemas/tenancy";
+export * from "./schemas/payment";
