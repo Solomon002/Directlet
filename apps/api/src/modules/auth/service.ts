@@ -165,3 +165,31 @@ export async function logout(token: string | undefined) {
     // An invalid or expired token needs no cleanup. Logout always succeeds.
   }
 }
+
+export async function getInviteInfo(token: string) {
+  const user = await prisma.user.findUnique({ where: { inviteToken: token } });
+
+  if (!user || !user.inviteExpiresAt || user.inviteExpiresAt.getTime() <= Date.now()) {
+    throw new AppError(410, "This invite link is invalid or has expired", "INVITE_EXPIRED");
+  }
+
+  return { email: user.email, fullName: user.fullName };
+}
+
+export async function acceptInvite(token: string, password: string) {
+  const user = await prisma.user.findUnique({ where: { inviteToken: token } });
+
+  if (!user || !user.inviteExpiresAt || user.inviteExpiresAt.getTime() <= Date.now()) {
+    throw new AppError(410, "This invite link is invalid or has expired", "INVITE_EXPIRED");
+  }
+
+  const passwordHash = await hashPassword(password);
+
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash, inviteToken: null, inviteExpiresAt: null },
+  });
+
+  const tokens = await issueTokens(updated);
+  return { user: toAuthUser(updated), ...tokens };
+}

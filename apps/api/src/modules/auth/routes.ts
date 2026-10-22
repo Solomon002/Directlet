@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { registerSchema, loginSchema } from "@directlet/shared";
+import { registerSchema, loginSchema, acceptInviteSchema } from "@directlet/shared";
 import { validate } from "../../middleware/validate";
 import { requireTrustedOrigin } from "../../middleware/requireTrustedOrigin";
 import {
@@ -42,4 +42,13 @@ authRouter.post(
   refreshRateLimiter,
   requireTrustedOrigin,
   asyncHandler(authController.logout),
+);
+
+authRouter.get("/invite/:token", asyncHandler(authController.getInvite));
+
+authRouter.post(
+  "/invite/:token/accept",
+  registerRateLimiter,
+  validate(acceptInviteSchema),
+  asyncHandler(authController.acceptInvite),
 );

@@ -8,9 +8,11 @@ import Browse from "../pages/public/Browse";
 import CompoundPage from "../pages/public/CompoundPage";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
+import AcceptInvite from "../pages/auth/AcceptInvite";
 import Dashboard from "../pages/landlord/Dashboard";
 import Properties from "../pages/landlord/Properties";
 import PropertyDetail from "../pages/landlord/PropertyDetail";
+import Tenancies from "../pages/landlord/Tenancies";
 import TenantHome from "../pages/tenant/Home";
 
 export const router = createBrowserRouter([
@@ -20,6 +22,7 @@ export const router = createBrowserRouter([
       { path: "/", element: <Home /> },
       { path: "/login", element: <Login /> },
       { path: "/register", element: <Register /> },
+      { path: "/invite/:token", element: <AcceptInvite /> },
       { path: "/compounds", element: <Browse /> },
       { path: "/compounds/:propertyId", element: <CompoundPage /> },
     ],
@@ -34,6 +37,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Dashboard /> },
           { path: "properties", element: <Properties /> },
           { path: "properties/:propertyId", element: <PropertyDetail /> },
+          { path: "tenancies", element: <Tenancies /> },
         ],
       },
     ],

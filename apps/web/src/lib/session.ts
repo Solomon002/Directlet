@@ -55,3 +55,14 @@ export async function logout(): Promise<void> {
   await authApi.post("/auth/logout").catch(() => undefined);
   useAuthStore.getState().clearSession();
 }
+
+export async function getInviteInfo(token: string): Promise<{ email: string; fullName: string }> {
+  const res = await authApi.get<{ email: string; fullName: string }>(`/auth/invite/${token}`);
+  return res.data;
+}
+
+export async function acceptInvite(token: string, password: string): Promise<User> {
+  const res = await authApi.post<SessionResponse>(`/auth/invite/${token}/accept`, { password });
+  useAuthStore.getState().setSession(res.data.user, res.data.accessToken);
+  return res.data.user;
+}

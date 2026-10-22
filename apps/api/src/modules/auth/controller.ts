@@ -64,3 +64,18 @@ export async function logout(req: Request, res: Response) {
   clearRefreshCookie(res);
   res.status(204).end();
 }
+
+export async function getInvite(req: Request, res: Response) {
+  const info = await authService.getInviteInfo(req.params.token as string);
+  res.status(200).json(info);
+}
+
+export async function acceptInvite(req: Request, res: Response) {
+  const { password } = req.body as { password: string };
+  const { user, accessToken, refreshToken, refreshExpiresAt } = await authService.acceptInvite(
+    req.params.token as string,
+    password,
+  );
+  setRefreshCookie(res, refreshToken, refreshExpiresAt);
+  res.status(200).json({ user, accessToken });
+}

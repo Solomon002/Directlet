@@ -19,6 +19,7 @@ export default function LandlordLayout() {
           <nav className="mt-8 flex flex-col gap-3 text-sm font-bold">
             <Link to="/landlord">Dashboard</Link>
             <Link to="/landlord/properties">Properties</Link>
+            <Link to="/landlord/tenancies">Tenancies</Link>
           </nav>
         </div>
         <button
