@@ -12,6 +12,9 @@ import {
   type UnitInput,
 } from "../../features/properties/api";
 import { parseApiError } from "../../lib/errors";
+import { PlaceMap } from "../../features/maps/Maps";
+import { LocationPicker } from "../../features/maps/LocationTools";
+import { hasLocation, type LatLng } from "../../features/maps/geo";
 
 const inputClass = "rounded-lg border border-mist px-3 py-2 font-sans text-ink";
 const labelClass = "flex flex-col gap-1 text-sm font-bold text-ink";
@@ -145,6 +148,7 @@ function PropertyForm({ property, onSaved }: { property: Property; onSaved: () =
   const [state, setState] = useState(property.state);
   const [description, setDescription] = useState(property.description ?? "");
   const [isPublic, setIsPublic] = useState(property.isPublic);
+  const [location, setLocation] = useState<LatLng | null>(hasLocation(property) ? property : null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -161,6 +165,8 @@ function PropertyForm({ property, onSaved }: { property: Property; onSaved: () =
         state,
         description,
         isPublic,
+        latitude: location?.latitude ?? null,
+        longitude: location?.longitude ?? null,
       });
       await onSaved();
     } catch (err) {
@@ -201,6 +207,12 @@ function PropertyForm({ property, onSaved }: { property: Property; onSaved: () =
         <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />
         Show on the public marketplace
       </label>
+
+      <LocationPicker
+        value={location}
+        onChange={setLocation}
+        defaultQuery={[address, area, city].filter(Boolean).join(", ")}
+      />
 
       {formError && <p className="text-sm font-bold text-red-600">{formError}</p>}
 
@@ -317,6 +329,19 @@ export default function PropertyDetail() {
         </div>
       </div>
       {property.description && !editingProperty && <p className="mt-2 text-ink">{property.description}</p>}
+
+      {!editingProperty && (
+        <div className="mt-4 max-w-xl">
+          {hasLocation(property) ? (
+            <PlaceMap place={property} label={property.name} />
+          ) : (
+            <p className="rounded-xl bg-white p-4 text-sm text-ink shadow-sm">
+              No map location yet. Click <span className="font-bold">Edit</span> to drop a pin so visitors
+              can see it on the map and get directions.
+            </p>
+          )}
+        </div>
+      )}
 
       {editingProperty && (
         <PropertyForm

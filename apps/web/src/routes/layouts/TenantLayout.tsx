@@ -1,8 +1,11 @@
 import { Link, Outlet, useNavigate } from "react-router";
 import { logout } from "../../lib/session";
+import { useUnreadCount } from "../../features/messages/api";
+import UnreadBadge from "../../features/messages/UnreadBadge";
 
 export default function TenantLayout() {
   const navigate = useNavigate();
+  const unread = useUnreadCount();
 
   async function handleLogout() {
     await logout();
@@ -19,6 +22,10 @@ export default function TenantLayout() {
           </Link>
           <nav className="flex gap-4 text-sm font-bold md:mt-8 md:flex-col md:gap-3">
             <Link to="/tenant">Home</Link>
+            <Link to="/tenant/messages">
+              Messages
+              <UnreadBadge count={unread} />
+            </Link>
           </nav>
         </div>
         <button

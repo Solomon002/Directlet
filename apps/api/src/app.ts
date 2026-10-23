@@ -16,6 +16,7 @@ import { complaintsRouter } from "./modules/complaints/routes";
 import { inspectionsRouter } from "./modules/inspections/routes";
 import { dashboardRouter } from "./modules/dashboard/routes";
 import { remindersRouter } from "./modules/reminders/routes";
+import { conversationsRouter } from "./modules/conversations/routes";
 
 export const app = express();
 
@@ -48,6 +49,7 @@ app.use("/complaints", complaintsRouter);
 app.use("/inspections", inspectionsRouter);
 app.use("/dashboard", dashboardRouter);
 app.use("/reminders", remindersRouter);
+app.use("/conversations", noStore, conversationsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

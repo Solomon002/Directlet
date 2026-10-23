@@ -1,8 +1,11 @@
 import { Link, Outlet, useNavigate } from "react-router";
 import { logout } from "../../lib/session";
+import { useUnreadCount } from "../../features/messages/api";
+import UnreadBadge from "../../features/messages/UnreadBadge";
 
 export default function LandlordLayout() {
   const navigate = useNavigate();
+  const unread = useUnreadCount();
 
   async function handleLogout() {
     await logout();
@@ -22,6 +25,10 @@ export default function LandlordLayout() {
             <Link to="/landlord/properties">Properties</Link>
             <Link to="/landlord/tenancies">Tenancies</Link>
             <Link to="/landlord/inspections">Inspections</Link>
+            <Link to="/landlord/messages">
+              Messages
+              <UnreadBadge count={unread} />
+            </Link>
           </nav>
         </div>
         <button

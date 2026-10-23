@@ -302,12 +302,18 @@ importers:
       axios:
         specifier: ^1.20.0
         version: 1.20.0(debug@4.4.3)
+      leaflet:
+        specifier: 1.9.4
+        version: 1.9.4
       react:
         specifier: 19.3.1
         version: 19.3.1
       react-dom:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
+      react-leaflet:
+        specifier: 5.0.0
+        version: 5.0.0(leaflet@1.9.4)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react-router:
         specifier: ^8.4.0
         version: 8.4.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -318,6 +324,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      '@types/leaflet':
+        specifier: 1.9.20
+        version: 1.9.20
       '@types/node':
         specifier: ^24.13.3
         version: 24.19.2
@@ -830,6 +839,13 @@ packages:
       '@types/react':
         optional: true
 
+  '@react-leaflet/core@3.0.0':
+    resolution: {integrity: sha512-3EWmekh4Nz+pGcr+xjf0KNyYfC3U2JjnkWsh0zcqaexYqmmB5ZhH37kz41JXGmKzpaMZCnPofBBm64i+YrEvGQ==}
+    peerDependencies:
+      leaflet: ^1.9.0
+      react: ^19.0.0
+      react-dom: ^19.0.0
+
   '@remix-run/route-pattern@0.22.1':
     resolution: {integrity: sha512-czdGJWh09Lapvcqt7Vb09KlrU2PhRJ8xQaI+AItTuD9aDJ5MAgxnS38lnys6Ll+6RJEqPiaUqTwIQhVLwFvv+w==}
 
@@ -1097,6 +1113,9 @@ packages:
 
   '@types/jsonwebtoken@9.0.10':
     resolution: {integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==}
+
+  '@types/leaflet@1.9.20':
+    resolution: {integrity: sha512-rooalPMlk61LCaLOvBF2VIf9M47HgMQqi5xQ9QRi7c8PkdIe0WrIi5IxXUXQjAdL0c+vcQ01mYWbthzmp9GHWw==}
 
   '@types/lodash@4.17.26':
     resolution: {integrity: sha512-48NWfiY6oNcKOh47Z4h+sIvwcQR91h6KPhaYKgeMIrkT2jV82Gy90SErj60vW8jQbeMSOSbhIv3bZ7JoqPPVhA==}
@@ -1769,6 +1788,9 @@ packages:
   jws@4.0.1:
     resolution: {integrity: sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA==}
 
+  leaflet@1.9.4:
+    resolution: {integrity: sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA==}
+
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
     engines: {node: '>= 12.0.0'}
@@ -2182,6 +2204,13 @@ packages:
     resolution: {integrity: sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==}
     peerDependencies:
       react: ^19.3.1
+
+  react-leaflet@5.0.0:
+    resolution: {integrity: sha512-CWbTpr5vcHw5bt9i4zSlPEVQdTVcML390TjeDG0cK59z1ylexpqC6M1PJFjV8jD7CF+ACBFsLIDs6DRMoLEofw==}
+    peerDependencies:
+      leaflet: ^1.9.0
+      react: ^19.0.0
+      react-dom: ^19.0.0
 
   react-router@8.4.0:
     resolution: {integrity: sha512-JtydAkBvU9UTEe5qNC+POhu+ZBNM7rlKY2IegwXc7Idj7xfRG16x5RZrw3mju+XlqBxfvb2ky9P3jUp9WyWC1g==}
@@ -2812,6 +2841,12 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
+  '@react-leaflet/core@3.0.0(leaflet@1.9.4)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    dependencies:
+      leaflet: 1.9.4
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
   '@remix-run/route-pattern@0.22.1': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.14':
@@ -3007,6 +3042,10 @@ snapshots:
     dependencies:
       '@types/ms': 2.1.0
       '@types/node': 26.6.5
+
+  '@types/leaflet@1.9.20':
+    dependencies:
+      '@types/geojson': 7946.0.16
 
   '@types/lodash@4.17.26': {}
 
@@ -3703,6 +3742,8 @@ snapshots:
       jwa: 2.0.1
       safe-buffer: 5.2.1
 
+  leaflet@1.9.4: {}
+
   lightningcss-android-arm64@1.32.0:
     optional: true
 
@@ -4060,6 +4101,13 @@ snapshots:
     dependencies:
       react: 19.3.1
       scheduler: 0.28.0
+
+  react-leaflet@5.0.0(leaflet@1.9.4)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+    dependencies:
+      '@react-leaflet/core': 3.0.0(leaflet@1.9.4)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      leaflet: 1.9.4
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
 
   react-router@8.4.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:

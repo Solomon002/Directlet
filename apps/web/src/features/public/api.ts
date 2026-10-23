@@ -19,6 +19,8 @@ export type PublicProperty = {
   city: string;
   state: string;
   description: string | null;
+  latitude: number | null;
+  longitude: number | null;
   unitCount?: number;
   vacantUnitCount?: number;
   units?: PublicUnit[];

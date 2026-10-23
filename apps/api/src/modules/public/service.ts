@@ -12,6 +12,8 @@ const publicPropertyFields = {
   city: true,
   state: true,
   description: true,
+  latitude: true,
+  longitude: true,
 } as const;
 
 const activeTenancyCount = { tenancies: { where: { status: "ACTIVE" as const } } };

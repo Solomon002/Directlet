@@ -5,6 +5,8 @@ export const registerSchema = z.object({
   email: z.email(),
   password: z.string().min(8, "password must be at least 8 characters"),
   phone: z.string().min(7).optional(),
+  // Tenants never self-register; a landlord invites them.
+  accountType: z.enum(["LANDLORD", "HUNTER"]).default("LANDLORD"),
 });
 
 export const loginSchema = z.object({

@@ -16,6 +16,7 @@ import Tenancies from "../pages/landlord/Tenancies";
 import TenancyDetail from "../pages/landlord/TenancyDetail";
 import Inspections from "../pages/landlord/Inspections";
 import TenantHome from "../pages/tenant/Home";
+import Inbox from "../features/messages/Inbox";
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +28,13 @@ export const router = createBrowserRouter([
       { path: "/invite/:token", element: <AcceptInvite /> },
       { path: "/compounds", element: <Browse /> },
       { path: "/compounds/:propertyId", element: <CompoundPage /> },
+      {
+        element: <ProtectedRoute allowedRoles={["HUNTER"]} />,
+        children: [
+          { path: "/messages", element: <Inbox basePath="/messages" /> },
+          { path: "/messages/:conversationId", element: <Inbox basePath="/messages" /> },
+        ],
+      },
     ],
   },
   {
@@ -42,6 +50,8 @@ export const router = createBrowserRouter([
           { path: "tenancies", element: <Tenancies /> },
           { path: "tenancies/:tenancyId", element: <TenancyDetail /> },
           { path: "inspections", element: <Inspections /> },
+          { path: "messages", element: <Inbox basePath="/landlord/messages" /> },
+          { path: "messages/:conversationId", element: <Inbox basePath="/landlord/messages" /> },
         ],
       },
     ],
@@ -52,7 +62,11 @@ export const router = createBrowserRouter([
     children: [
       {
         element: <TenantLayout />,
-        children: [{ index: true, element: <TenantHome /> }],
+        children: [
+          { index: true, element: <TenantHome /> },
+          { path: "messages", element: <Inbox basePath="/tenant/messages" /> },
+          { path: "messages/:conversationId", element: <Inbox basePath="/tenant/messages" /> },
+        ],
       },
     ],
   },

@@ -3,9 +3,14 @@ import { useParams } from "react-router";
 import { getPublicProperty, type PublicProperty } from "../../features/public/api";
 import { requestInspection } from "../../features/inspections/api";
 import { parseApiError } from "../../lib/errors";
+import { DirectionsPanel } from "../../features/maps/LocationTools";
+import { hasLocation } from "../../features/maps/geo";
+import StartConversation from "../../features/messages/StartConversation";
+import { useAuthStore } from "../../stores/authStore";
 
 export default function CompoundPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
+  const user = useAuthStore((s) => s.user);
   const [property, setProperty] = useState<PublicProperty | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -83,6 +88,15 @@ export default function CompoundPage() {
       </p>
       {property.description && <p className="mt-2 text-ink">{property.description}</p>}
 
+      {hasLocation(property) && (
+        <div className="mt-6 max-w-2xl">
+          <h2 className="font-display text-lg font-extrabold text-night-blue">Location</h2>
+          <div className="mt-3">
+            <DirectionsPanel place={property} label={property.name} />
+          </div>
+        </div>
+      )}
+
       <h2 className="mt-8 font-display text-lg font-extrabold text-night-blue">Flats</h2>
       <ul className="mt-4 flex flex-col gap-3">
         {property.units?.map((unit) => (
@@ -104,13 +118,22 @@ export default function CompoundPage() {
             </p>
 
             {unit.isVacant && (
-              <button
-                type="button"
-                onClick={() => toggleForm(unit.id)}
-                className="mt-2 text-sm font-bold text-trust-blue hover:underline"
-              >
-                {openUnitId === unit.id ? "Cancel" : "Request a viewing"}
-              </button>
+              <div className="mt-2 flex flex-wrap items-start gap-x-6 gap-y-2">
+                <button
+                  type="button"
+                  onClick={() => toggleForm(unit.id)}
+                  className="text-sm font-bold text-trust-blue hover:underline"
+                >
+                  {openUnitId === unit.id ? "Cancel" : "Request a viewing"}
+                </button>
+                {user?.role !== "LANDLORD" && (
+                  <StartConversation
+                    target={{ propertyId: property.id, unitId: unit.id }}
+                    buttonLabel="Message landlord"
+                    initialText={`Hello, is ${unit.label} at ${property.name} still available?`}
+                  />
+                )}
+              </div>
             )}
 
             {unit.isVacant && openUnitId === unit.id && (

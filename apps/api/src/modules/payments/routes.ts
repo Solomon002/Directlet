@@ -1,6 +1,7 @@
 import express, { Router } from "express";
 import { createPaymentSchema, rejectPaymentSchema } from "@directlet/shared";
 import { authenticate } from "../../middleware/authenticate";
+import { requireRole } from "../../middleware/requireRole";
 import { validate } from "../../middleware/validate";
 import { asyncHandler } from "../../utils/asyncHandler";
 import * as paymentController from "./controller";
@@ -8,7 +9,8 @@ import { PROOF_CONTENT_TYPES, PROOF_SIZE_LIMIT } from "./service";
 
 export const paymentsRouter = Router();
 
-paymentsRouter.use(authenticate);
+// House hunters have no payments, complaints or reminders.
+paymentsRouter.use(authenticate, requireRole("LANDLORD", "TENANT"));
 
 paymentsRouter.get("/", asyncHandler(paymentController.list));
 paymentsRouter.post("/", validate(createPaymentSchema), asyncHandler(paymentController.create));

@@ -18,7 +18,7 @@ function toAuthUser(user: {
   id: string;
   email: string;
   fullName: string;
-  role: "LANDLORD" | "TENANT";
+  role: UserRole;
 }) {
   return { id: user.id, email: user.email, fullName: user.fullName, role: user.role };
 }
@@ -66,7 +66,7 @@ async function deleteFamily(familyId: string) {
   await prisma.refreshToken.deleteMany({ where: { familyId } });
 }
 
-export async function registerLandlord(input: RegisterInput) {
+export async function register(input: RegisterInput) {
   const email = normalizeEmail(input.email);
   const passwordHash = await hashPassword(input.password);
 
@@ -77,7 +77,7 @@ export async function registerLandlord(input: RegisterInput) {
         passwordHash,
         fullName: input.fullName.trim(),
         phone: input.phone,
-        role: "LANDLORD",
+        role: input.accountType,
       },
     })
     .catch((error: unknown) => {

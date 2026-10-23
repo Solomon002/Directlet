@@ -20,6 +20,8 @@ export type Property = {
   state: string;
   description: string | null;
   isPublic: boolean;
+  latitude: number | null;
+  longitude: number | null;
   _count?: { units: number };
   units?: Unit[];
 };
@@ -55,7 +57,16 @@ export type PropertyInput = {
   state: string;
   description?: string;
   isPublic?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
 };
+
+export type GeocodeResult = { label: string; latitude: number; longitude: number };
+
+export async function geocode(query: string) {
+  const res = await api.get<{ results: GeocodeResult[] }>("/properties/geocode", { params: { q: query } });
+  return res.data.results;
+}
 
 export type UnitInput = {
   label: string;

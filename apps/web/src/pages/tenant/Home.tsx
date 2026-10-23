@@ -14,6 +14,7 @@ import {
 import { listComplaints, fileComplaint, type Complaint } from "../../features/complaints/api";
 import { listReminders, describeReminder, type Reminder } from "../../features/dashboard/api";
 import { parseApiError } from "../../lib/errors";
+import StartConversation from "../../features/messages/StartConversation";
 
 export default function TenantHome() {
   const [tenancy, setTenancy] = useState<Tenancy | null>(null);
@@ -209,6 +210,15 @@ export default function TenantHome() {
         NGN {Number(tenancy.rentAmount).toLocaleString()} / {tenancy.rentFrequency.toLowerCase()}
       </p>
       <p className="mt-1 font-bold text-ink">Outstanding: NGN {outstanding.toLocaleString()}</p>
+      {tenancy.unit && (
+        <div className="mt-2">
+          <StartConversation
+            target={{ propertyId: tenancy.unit.property.id, unitId: tenancy.unit.id }}
+            buttonLabel="Message your landlord"
+            initialText=""
+          />
+        </div>
+      )}
 
       {reminders.map((reminder) => (
         <div

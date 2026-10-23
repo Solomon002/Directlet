@@ -29,7 +29,7 @@ function readRefreshCookie(req: Request): string | undefined {
 
 export async function register(req: Request, res: Response) {
   const { user, accessToken, refreshToken, refreshExpiresAt } =
-    await authService.registerLandlord(req.body);
+    await authService.register(req.body);
   setRefreshCookie(res, refreshToken, refreshExpiresAt);
   res.status(201).json({ user, accessToken });
 }

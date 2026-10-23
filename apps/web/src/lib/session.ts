@@ -44,6 +44,7 @@ export async function register(input: {
   email: string;
   password: string;
   phone?: string;
+  accountType: "LANDLORD" | "HUNTER";
 }): Promise<User> {
   const res = await authApi.post<SessionResponse>("/auth/register", input);
   useAuthStore.getState().setSession(res.data.user, res.data.accessToken);

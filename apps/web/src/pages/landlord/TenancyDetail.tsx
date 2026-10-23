@@ -16,6 +16,7 @@ import {
   type ComplaintStatus,
 } from "../../features/complaints/api";
 import { parseApiError } from "../../lib/errors";
+import StartConversation from "../../features/messages/StartConversation";
 
 export default function TenancyDetail() {
   const { tenancyId } = useParams<{ tenancyId: string }>();
@@ -171,6 +172,14 @@ export default function TenancyDetail() {
         NGN {Number(tenancy.rentAmount).toLocaleString()} / {tenancy.rentFrequency.toLowerCase()} - {tenancy.status}
         {tenancy.endedAt ? ` on ${new Date(tenancy.endedAt).toDateString()}` : ""}
       </p>
+
+      <div className="mt-3">
+        <StartConversation
+          target={{ tenancyId: tenancy.id }}
+          buttonLabel="Message tenant"
+          initialText=""
+        />
+      </div>
 
       {tenancy.status === "ACTIVE" && (
         <div className="mt-4">

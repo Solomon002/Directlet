@@ -35,6 +35,12 @@ async function resolveTenant(email: string, fullName: string, phone: string | un
   const existing = await prisma.user.findUnique({ where: { email } });
 
   if (existing) {
+    // A house hunter who rents a flat becomes a tenant, keeping their login
+    // and their messages. Their role updates on their next token refresh.
+    if (existing.role === "HUNTER") {
+      const tenant = await prisma.user.update({ where: { id: existing.id }, data: { role: "TENANT" } });
+      return { tenant, inviteToken: null as string | null };
+    }
     if (existing.role !== "TENANT") {
       throw new AppError(409, "This email belongs to a non-tenant account", "EMAIL_NOT_TENANT");
     }

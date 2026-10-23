@@ -1,5 +1,16 @@
 import type { Request, Response } from "express";
+import { AppError } from "../../utils/AppError";
+import { geocodeAddress } from "../../lib/geocode";
 import * as propertyService from "./service";
+
+export async function geocode(req: Request, res: Response) {
+  const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (query.length < 3 || query.length > 200) {
+    throw new AppError(400, "Type at least 3 characters of the address", "VALIDATION_ERROR");
+  }
+  const results = await geocodeAddress(query);
+  res.status(200).json({ results });
+}
 
 function landlordId(req: Request): string {
   return req.user!.sub;

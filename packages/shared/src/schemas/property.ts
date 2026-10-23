@@ -8,6 +8,9 @@ export const createPropertySchema = z.object({
   state: z.string().min(2, "state is required"),
   description: z.string().optional(),
   isPublic: z.boolean().optional().default(true),
+  // null clears a pin that was set before.
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
 });
 
 // Defaults are dropped before .partial(): Zod still applies them to missing

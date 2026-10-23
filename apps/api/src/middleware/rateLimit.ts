@@ -57,6 +57,28 @@ export const loginEmailRateLimiter = rateLimit({
   message: tooMany("Too many login attempts. Try again later."),
 });
 
+// Per signed-in user. These run after authenticate, so req.user is set.
+function userKey(req: Request) {
+  return req.user?.sub ?? ipKey(req);
+}
+
+// Nominatim allows about one request a second for the whole app.
+export const geocodeRateLimiter = rateLimit({
+  ...base,
+  windowMs: MINUTE,
+  limit: 10,
+  keyGenerator: userKey,
+  message: tooMany("Too many address searches. Wait a minute or drop the pin on the map."),
+});
+
+export const messageRateLimiter = rateLimit({
+  ...base,
+  windowMs: MINUTE,
+  limit: 30,
+  keyGenerator: userKey,
+  message: tooMany("You are sending messages too quickly. Wait a moment."),
+});
+
 export const refreshRateLimiter = rateLimit({
   ...base,
   windowMs: 15 * MINUTE,

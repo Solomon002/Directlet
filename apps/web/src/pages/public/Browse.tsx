@@ -1,13 +1,16 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router";
 import { listPublicProperties, type PublicProperty } from "../../features/public/api";
 import { parseApiError } from "../../lib/errors";
+import { PlacesMap } from "../../features/maps/Maps";
+import { hasLocation } from "../../features/maps/geo";
 
 export default function Browse() {
   // Filters live in the URL so a filtered search can be shared as a link.
   const [searchParams, setSearchParams] = useSearchParams();
   const city = searchParams.get("city") ?? "";
   const area = searchParams.get("area") ?? "";
+  const view = searchParams.get("view") === "map" ? "map" : "list";
 
   const [cityDraft, setCityDraft] = useState(city);
   const [areaDraft, setAreaDraft] = useState(area);
@@ -35,14 +38,25 @@ export default function Browse() {
     const next = new URLSearchParams();
     if (cityDraft.trim()) next.set("city", cityDraft.trim());
     if (areaDraft.trim()) next.set("area", areaDraft.trim());
+    if (view === "map") next.set("view", "map");
     setSearchParams(next);
   }
 
   function handleClear() {
     setCityDraft("");
     setAreaDraft("");
-    setSearchParams(new URLSearchParams());
+    setSearchParams(view === "map" ? new URLSearchParams({ view: "map" }) : new URLSearchParams());
   }
+
+  function setView(next: "list" | "map") {
+    const params = new URLSearchParams(searchParams);
+    if (next === "map") params.set("view", "map");
+    else params.delete("view");
+    setSearchParams(params);
+  }
+
+  // Memoised so the map only re-fits its bounds when the results change.
+  const mapped = useMemo(() => properties.filter(hasLocation), [properties]);
 
   const filtered = Boolean(city || area);
 
@@ -88,6 +102,21 @@ export default function Browse() {
         </div>
       </form>
 
+      <div className="mt-4 inline-flex rounded-xl bg-white p-1 shadow-sm">
+        {(["list", "map"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setView(option)}
+            className={`rounded-lg px-4 py-1.5 text-sm font-bold ${
+              view === option ? "bg-trust-blue text-white" : "text-ink"
+            }`}
+          >
+            {option === "list" ? "List" : "Map"}
+          </button>
+        ))}
+      </div>
+
       {loading && <p className="mt-4 text-ink">Loading...</p>}
       {loadError && <p className="mt-4 text-sm font-bold text-red-600">{loadError}</p>}
 
@@ -97,7 +126,38 @@ export default function Browse() {
         </p>
       )}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {view === "map" && !loading && !loadError && (
+        <div className="mt-6">
+          {mapped.length > 0 ? (
+            <PlacesMap
+              places={mapped}
+              renderPopup={(property) => (
+                <div>
+                  <p className="font-display font-extrabold text-night-blue">{property.name}</p>
+                  <p className="text-xs">
+                    {property.area}, {property.city}
+                  </p>
+                  <p className="text-xs font-bold">
+                    {property.vacantUnitCount ? `${property.vacantUnitCount} vacant` : "Fully let"}
+                  </p>
+                  <Link to={`/compounds/${property.id}`} className="text-xs font-bold text-trust-blue">
+                    View flats and directions
+                  </Link>
+                </div>
+              )}
+            />
+          ) : (
+            <p className="text-ink">None of these compounds has a map location yet.</p>
+          )}
+          {mapped.length > 0 && mapped.length < properties.length && (
+            <p className="mt-2 text-sm text-ink/60">
+              {properties.length - mapped.length} compound(s) have no map location yet; switch to List to see them.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className={`mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${view === "map" ? "hidden" : ""}`}>
         {properties.map((property) => (
           <Link
             key={property.id}

@@ -76,7 +76,10 @@ export default function Login() {
       </form>
 
       <p className="mt-4 text-sm text-ink">
-        Need an account? <Link to="/register" className="font-bold text-trust-blue">Sign up</Link>
+        Need an account?{" "}
+        <Link to="/register" state={location.state} className="font-bold text-trust-blue">
+          Sign up
+        </Link>
       </p>
     </div>
   );
