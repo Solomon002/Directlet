@@ -11,6 +11,7 @@ import { propertiesRouter } from "./modules/properties/routes";
 import { publicRouter } from "./modules/public/routes";
 import { tenanciesRouter } from "./modules/tenancies/routes";
 import { paymentsRouter } from "./modules/payments/routes";
+import { complaintsRouter } from "./modules/complaints/routes";
 
 export const app = express();
 
@@ -38,6 +39,7 @@ app.use("/properties", propertiesRouter);
 app.use("/public", publicRouter);
 app.use("/tenancies", tenanciesRouter);
 app.use("/payments", paymentsRouter);
+app.use("/complaints", complaintsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
