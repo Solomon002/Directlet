@@ -8,12 +8,14 @@ import {
   type PaymentMethod,
 } from "../../features/payments/api";
 import { listComplaints, fileComplaint, type Complaint } from "../../features/complaints/api";
+import { listReminders, describeReminder, type Reminder } from "../../features/dashboard/api";
 import { parseApiError } from "../../lib/errors";
 
 export default function TenantHome() {
   const [tenancy, setTenancy] = useState<Tenancy | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -35,14 +37,16 @@ export default function TenantHome() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [myTenancy, myPayments, myComplaints] = await Promise.all([
+      const [myTenancy, myPayments, myComplaints, myReminders] = await Promise.all([
         getMyTenancyAsTenant(),
         listPayments(),
         listComplaints(),
+        listReminders(),
       ]);
       setTenancy(myTenancy);
       setPayments(myPayments);
       setComplaints(myComplaints);
+      setReminders(myReminders);
     } catch (err) {
       setLoadError(parseApiError(err).message);
     } finally {
@@ -148,6 +152,23 @@ export default function TenantHome() {
         NGN {Number(tenancy.rentAmount).toLocaleString()} / {tenancy.rentFrequency.toLowerCase()}
       </p>
       <p className="mt-1 font-bold text-ink">Outstanding: NGN {outstanding.toLocaleString()}</p>
+
+      {reminders.map((reminder) => (
+        <div
+          key={reminder.rentChargeId}
+          className={
+            reminder.kind === "OVERDUE"
+              ? "mt-4 max-w-md rounded-xl border-l-4 border-red-600 bg-white p-4 shadow-sm"
+              : "mt-4 max-w-md rounded-xl border-l-4 border-trust-blue bg-white p-4 shadow-sm"
+          }
+        >
+          <p className="font-display font-extrabold text-night-blue">{describeReminder(reminder)}</p>
+          <p className="text-sm text-ink">
+            NGN {Number(reminder.balance).toLocaleString()} for the period starting{" "}
+            {new Date(reminder.dueDate).toDateString()}
+          </p>
+        </div>
+      ))}
 
       <div className="mt-8 max-w-md rounded-xl bg-white p-6 shadow-sm">
         <h2 className="font-display text-lg font-extrabold text-night-blue">Record a payment</h2>

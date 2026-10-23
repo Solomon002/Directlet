@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "jobs:rent-roll": "tsx src/jobs/runRentRoll.ts"
   },
   "dependencies": {
     "@directlet/shared": "workspace:*",

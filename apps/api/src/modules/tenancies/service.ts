@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
-import type { RentFrequency } from "../../generated/prisma/enums";
+import { addRentPeriod } from "../../lib/rentPeriod";
 import type { CreateTenancyInput } from "@directlet/shared";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -17,25 +17,6 @@ function isUniqueViolation(error: unknown) {
     "code" in error &&
     (error as { code?: unknown }).code === "P2002"
   );
-}
-
-function addRentPeriod(date: Date, frequency: RentFrequency): Date {
-  const result = new Date(date);
-  switch (frequency) {
-    case "MONTHLY":
-      result.setMonth(result.getMonth() + 1);
-      break;
-    case "QUARTERLY":
-      result.setMonth(result.getMonth() + 3);
-      break;
-    case "BIANNUAL":
-      result.setMonth(result.getMonth() + 6);
-      break;
-    case "ANNUAL":
-      result.setFullYear(result.getFullYear() + 1);
-      break;
-  }
-  return result;
 }
 
 async function getOwnedUnit(landlordId: string, unitId: string) {

@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import { healthResponseSchema } from "@directlet/shared";
 import { env } from "./config/env";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler";
+import { auditLog } from "./middleware/auditLog";
 import { authRouter } from "./modules/auth/routes";
 import { propertiesRouter } from "./modules/properties/routes";
 import { publicRouter } from "./modules/public/routes";
@@ -13,6 +14,8 @@ import { tenanciesRouter } from "./modules/tenancies/routes";
 import { paymentsRouter } from "./modules/payments/routes";
 import { complaintsRouter } from "./modules/complaints/routes";
 import { inspectionsRouter } from "./modules/inspections/routes";
+import { dashboardRouter } from "./modules/dashboard/routes";
+import { remindersRouter } from "./modules/reminders/routes";
 
 export const app = express();
 
@@ -26,6 +29,7 @@ app.use(helmet());
 app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }));
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
+app.use(auditLog);
 
 app.get("/health", (_req, res) => {
   const body = healthResponseSchema.parse({
@@ -42,6 +46,8 @@ app.use("/tenancies", tenanciesRouter);
 app.use("/payments", paymentsRouter);
 app.use("/complaints", complaintsRouter);
 app.use("/inspections", inspectionsRouter);
+app.use("/dashboard", dashboardRouter);
+app.use("/reminders", remindersRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
