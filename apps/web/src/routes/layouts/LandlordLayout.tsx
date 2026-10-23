@@ -20,6 +20,7 @@ export default function LandlordLayout() {
             <Link to="/landlord">Dashboard</Link>
             <Link to="/landlord/properties">Properties</Link>
             <Link to="/landlord/tenancies">Tenancies</Link>
+            <Link to="/landlord/inspections">Inspections</Link>
           </nav>
         </div>
         <button
