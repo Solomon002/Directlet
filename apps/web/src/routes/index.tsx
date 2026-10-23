@@ -13,6 +13,7 @@ import Dashboard from "../pages/landlord/Dashboard";
 import Properties from "../pages/landlord/Properties";
 import PropertyDetail from "../pages/landlord/PropertyDetail";
 import Tenancies from "../pages/landlord/Tenancies";
+import TenancyDetail from "../pages/landlord/TenancyDetail";
 import TenantHome from "../pages/tenant/Home";
 
 export const router = createBrowserRouter([
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
           { path: "properties", element: <Properties /> },
           { path: "properties/:propertyId", element: <PropertyDetail /> },
           { path: "tenancies", element: <Tenancies /> },
+          { path: "tenancies/:tenancyId", element: <TenancyDetail /> },
         ],
       },
     ],

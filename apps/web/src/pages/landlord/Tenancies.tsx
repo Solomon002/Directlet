@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router";
 import { listMyTenancies, createTenancy, type Tenancy } from "../../features/tenancies/api";
 import { listMyProperties, getMyProperty, type Property, type Unit } from "../../features/properties/api";
 import { parseApiError } from "../../lib/errors";
@@ -218,6 +219,12 @@ export default function Tenancies() {
               <p className="text-sm text-ink">
                 NGN {Number(tenancy.rentAmount).toLocaleString()} / {tenancy.rentFrequency.toLowerCase()} - {tenancy.status}
               </p>
+              <Link
+                to={`/landlord/tenancies/${tenancy.id}`}
+                className="mt-2 inline-block text-sm font-bold text-trust-blue hover:underline"
+              >
+                View payments
+              </Link>
             </li>
           ))}
         </ul>

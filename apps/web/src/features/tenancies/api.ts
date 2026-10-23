@@ -60,3 +60,8 @@ export async function endTenancy(tenancyId: string) {
   const res = await api.post<{ tenancy: Tenancy }>(`/tenancies/${tenancyId}/end`);
   return res.data.tenancy;
 }
+
+export async function getMyTenancyAsTenant() {
+  const res = await api.get<{ tenancy: Tenancy }>("/tenancies/mine");
+  return res.data.tenancy;
+}
