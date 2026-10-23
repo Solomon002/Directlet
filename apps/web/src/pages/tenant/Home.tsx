@@ -7,11 +7,13 @@ import {
   type Payment,
   type PaymentMethod,
 } from "../../features/payments/api";
+import { listComplaints, fileComplaint, type Complaint } from "../../features/complaints/api";
 import { parseApiError } from "../../lib/errors";
 
 export default function TenantHome() {
   const [tenancy, setTenancy] = useState<Tenancy | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -23,13 +25,24 @@ export default function TenantHome() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
+  const [complaintTitle, setComplaintTitle] = useState("");
+  const [complaintDescription, setComplaintDescription] = useState("");
+  const [complaintSubmitting, setComplaintSubmitting] = useState(false);
+  const [complaintError, setComplaintError] = useState<string | null>(null);
+  const [complaintSuccess, setComplaintSuccess] = useState<string | null>(null);
+
   async function loadData() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [myTenancy, myPayments] = await Promise.all([getMyTenancyAsTenant(), listPayments()]);
+      const [myTenancy, myPayments, myComplaints] = await Promise.all([
+        getMyTenancyAsTenant(),
+        listPayments(),
+        listComplaints(),
+      ]);
       setTenancy(myTenancy);
       setPayments(myPayments);
+      setComplaints(myComplaints);
     } catch (err) {
       setLoadError(parseApiError(err).message);
     } finally {
@@ -80,6 +93,30 @@ export default function TenantHome() {
       await downloadReceipt(payment.id, payment.receipt.receiptNumber);
     } catch (err) {
       setLoadError(parseApiError(err).message);
+    }
+  }
+
+  async function handleFileComplaint(e: FormEvent) {
+    e.preventDefault();
+    if (!tenancy) return;
+    setComplaintSubmitting(true);
+    setComplaintError(null);
+    setComplaintSuccess(null);
+
+    try {
+      await fileComplaint({
+        tenancyId: tenancy.id,
+        title: complaintTitle,
+        description: complaintDescription,
+      });
+      setComplaintSuccess("Complaint filed. Your landlord will see it on their dashboard.");
+      setComplaintTitle("");
+      setComplaintDescription("");
+      setComplaints(await listComplaints());
+    } catch (err) {
+      setComplaintError(parseApiError(err).message);
+    } finally {
+      setComplaintSubmitting(false);
     }
   }
 
@@ -210,6 +247,74 @@ export default function TenantHome() {
                 >
                   Download receipt
                 </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-8 max-w-md rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="font-display text-lg font-extrabold text-night-blue">File a complaint</h2>
+        <form onSubmit={handleFileComplaint} className="mt-4 flex flex-col gap-3">
+          <label className="flex flex-col gap-1 text-sm font-bold text-ink">
+            Title
+            <input
+              value={complaintTitle}
+              onChange={(e) => setComplaintTitle(e.target.value)}
+              required
+              minLength={3}
+              className="rounded-lg border border-mist px-3 py-2 font-sans text-ink"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm font-bold text-ink">
+            Description <span className="font-normal text-ink/60">(at least 10 characters)</span>
+            <textarea
+              value={complaintDescription}
+              onChange={(e) => setComplaintDescription(e.target.value)}
+              required
+              minLength={10}
+              rows={3}
+              className="rounded-lg border border-mist px-3 py-2 font-sans text-ink"
+            />
+          </label>
+
+          {complaintError && <p className="text-sm font-bold text-red-600">{complaintError}</p>}
+          {complaintSuccess && <p className="text-sm font-bold text-direct-green">{complaintSuccess}</p>}
+
+          <button
+            type="submit"
+            disabled={complaintSubmitting}
+            className="mt-2 rounded-xl bg-trust-blue px-5 py-3 font-display font-extrabold text-white disabled:opacity-60"
+          >
+            {complaintSubmitting ? "Filing..." : "File complaint"}
+          </button>
+        </form>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="font-display text-lg font-extrabold text-night-blue">Your complaints</h2>
+        {complaints.length === 0 && <p className="mt-2 text-ink">No complaints filed yet.</p>}
+        <ul className="mt-3 flex flex-col gap-3">
+          {complaints.map((complaint) => (
+            <li key={complaint.id} className="rounded-xl bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="font-display font-extrabold text-night-blue">{complaint.title}</p>
+                <span
+                  className={
+                    complaint.status === "RESOLVED"
+                      ? "text-sm font-bold text-direct-green"
+                      : complaint.status === "IN_PROGRESS"
+                        ? "text-sm font-bold text-trust-blue"
+                        : "text-sm font-bold text-ink/60"
+                  }
+                >
+                  {complaint.status.replace("_", " ")}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-ink">{complaint.description}</p>
+              {complaint.landlordNote && (
+                <p className="mt-1 text-sm text-ink">Note: {complaint.landlordNote}</p>
               )}
             </li>
           ))}

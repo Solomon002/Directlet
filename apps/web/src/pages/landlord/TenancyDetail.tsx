@@ -8,26 +8,43 @@ import {
   downloadReceipt,
   type Payment,
 } from "../../features/payments/api";
+import {
+  listComplaints,
+  updateComplaintStatus,
+  type Complaint,
+  type ComplaintStatus,
+} from "../../features/complaints/api";
 import { parseApiError } from "../../lib/errors";
 
 export default function TenancyDetail() {
   const { tenancyId } = useParams<{ tenancyId: string }>();
   const [tenancy, setTenancy] = useState<Tenancy | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actingOnId, setActingOnId] = useState<string | null>(null);
   const [rejectReasonDraft, setRejectReasonDraft] = useState<Record<string, string>>({});
 
+  const [complaintActionError, setComplaintActionError] = useState<string | null>(null);
+  const [complaintActingOnId, setComplaintActingOnId] = useState<string | null>(null);
+  const [complaintStatusDraft, setComplaintStatusDraft] = useState<Record<string, ComplaintStatus>>({});
+  const [complaintNoteDraft, setComplaintNoteDraft] = useState<Record<string, string>>({});
+
   async function loadData() {
     if (!tenancyId) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const [myTenancy, allPayments] = await Promise.all([getMyTenancy(tenancyId), listPayments()]);
+      const [myTenancy, allPayments, allComplaints] = await Promise.all([
+        getMyTenancy(tenancyId),
+        listPayments(),
+        listComplaints(),
+      ]);
       setTenancy(myTenancy);
       setPayments(allPayments.filter((payment) => payment.tenancyId === tenancyId));
+      setComplaints(allComplaints.filter((complaint) => complaint.tenancyId === tenancyId));
     } catch (err) {
       setLoadError(parseApiError(err).message);
     } finally {
@@ -71,6 +88,22 @@ export default function TenancyDetail() {
       await downloadReceipt(payment.id, payment.receipt.receiptNumber);
     } catch (err) {
       setActionError(parseApiError(err).message);
+    }
+  }
+
+  async function handleUpdateComplaintStatus(complaint: Complaint) {
+    setComplaintActingOnId(complaint.id);
+    setComplaintActionError(null);
+    try {
+      await updateComplaintStatus(complaint.id, {
+        status: complaintStatusDraft[complaint.id] ?? complaint.status,
+        landlordNote: complaintNoteDraft[complaint.id] || undefined,
+      });
+      await loadData();
+    } catch (err) {
+      setComplaintActionError(parseApiError(err).message);
+    } finally {
+      setComplaintActingOnId(null);
     }
   }
 
@@ -195,6 +228,71 @@ export default function TenancyDetail() {
                   Download receipt
                 </button>
               )}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="font-display text-lg font-extrabold text-night-blue">Complaints</h2>
+        {complaintActionError && (
+          <p className="mt-2 text-sm font-bold text-red-600">{complaintActionError}</p>
+        )}
+        {complaints.length === 0 && <p className="mt-2 text-ink">No complaints filed yet.</p>}
+        <ul className="mt-3 flex flex-col gap-3">
+          {complaints.map((complaint) => (
+            <li key={complaint.id} className="rounded-xl bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="font-display font-extrabold text-night-blue">{complaint.title}</p>
+                <span
+                  className={
+                    complaint.status === "RESOLVED"
+                      ? "text-sm font-bold text-direct-green"
+                      : complaint.status === "IN_PROGRESS"
+                        ? "text-sm font-bold text-trust-blue"
+                        : "text-sm font-bold text-ink/60"
+                  }
+                >
+                  {complaint.status.replace("_", " ")}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-ink">{complaint.description}</p>
+              {complaint.landlordNote && (
+                <p className="mt-1 text-sm text-ink">Note: {complaint.landlordNote}</p>
+              )}
+
+              <div className="mt-3 flex flex-col gap-2">
+                <select
+                  value={complaintStatusDraft[complaint.id] ?? complaint.status}
+                  onChange={(e) =>
+                    setComplaintStatusDraft((prev) => ({
+                      ...prev,
+                      [complaint.id]: e.target.value as ComplaintStatus,
+                    }))
+                  }
+                  className="rounded-lg border border-mist px-3 py-2 font-sans text-sm text-ink"
+                >
+                  <option value="OPEN">Open</option>
+                  <option value="IN_PROGRESS">In progress</option>
+                  <option value="RESOLVED">Resolved</option>
+                </select>
+                <input
+                  placeholder="Note (optional)"
+                  value={complaintNoteDraft[complaint.id] ?? ""}
+                  onChange={(e) =>
+                    setComplaintNoteDraft((prev) => ({ ...prev, [complaint.id]: e.target.value }))
+                  }
+                  className="rounded-lg border border-mist px-3 py-2 font-sans text-sm text-ink"
+                />
+                <button
+                  type="button"
+                  disabled={complaintActingOnId === complaint.id}
+                  onClick={() => void handleUpdateComplaintStatus(complaint)}
+                  className="rounded-xl bg-trust-blue px-4 py-2 font-display font-extrabold text-white disabled:opacity-60"
+                >
+                  Update status
+                </button>
+              </div>
             </li>
           ))}
         </ul>
