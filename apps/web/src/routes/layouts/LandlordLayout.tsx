@@ -11,12 +11,13 @@ export default function LandlordLayout() {
 
   return (
     <div className="min-h-screen bg-mist md:flex">
-      <aside className="flex flex-col justify-between bg-night-blue px-6 py-8 text-white md:w-56">
+      {/* A compact top bar on phones, a sidebar from md up. */}
+      <aside className="flex items-start justify-between gap-4 bg-night-blue px-4 py-3 text-white md:w-56 md:flex-col md:px-6 md:py-8">
         <div>
           <Link to="/landlord" className="font-display text-lg font-extrabold">
             DirectLet
           </Link>
-          <nav className="mt-8 flex flex-col gap-3 text-sm font-bold">
+          <nav className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold md:mt-8 md:flex-col md:gap-3">
             <Link to="/landlord">Dashboard</Link>
             <Link to="/landlord/properties">Properties</Link>
             <Link to="/landlord/tenancies">Tenancies</Link>
@@ -26,7 +27,7 @@ export default function LandlordLayout() {
         <button
           type="button"
           onClick={handleLogout}
-          className="text-left text-sm font-bold text-white/70 hover:text-white"
+          className="shrink-0 whitespace-nowrap text-left text-sm font-bold text-white/70 hover:text-white"
         >
           Log out
         </button>

@@ -174,9 +174,24 @@ model Payment {
   confirmedBy User?               @relation("PaymentConfirmedBy", fields: [confirmedById], references: [id])
   allocations PaymentAllocation[]
   receipt     Receipt?
+  proof       PaymentProof?
 
   @@index([tenancyId])
   @@index([status])
+}
+
+// The tenant's evidence for a payment (transfer screenshot or bank PDF).
+// Stored in the database so it is covered by the same backups and access
+// checks as the payment itself. Size is capped at upload time.
+model PaymentProof {
+  id          String   @id @default(uuid()) @db.Uuid
+  paymentId   String   @unique @db.Uuid
+  contentType String
+  sizeBytes   Int
+  data        Bytes
+  createdAt   DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 }
 
 // Links a payment to the charges it covers (one payment can cover several).

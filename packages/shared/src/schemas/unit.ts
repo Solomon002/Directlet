@@ -11,7 +11,11 @@ export const createUnitSchema = z.object({
   description: z.string().optional(),
 });
 
-export const updateUnitSchema = createUnitSchema.partial();
+// Defaults are dropped before .partial(): Zod still applies them to missing
+// keys, so an edit would otherwise silently reset rentFrequency to ANNUAL.
+export const updateUnitSchema = createUnitSchema
+  .extend({ rentFrequency: z.enum(rentFrequencyValues) })
+  .partial();
 
 export type CreateUnitInput = z.infer<typeof createUnitSchema>;
 export type UpdateUnitInput = z.infer<typeof updateUnitSchema>;

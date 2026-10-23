@@ -16,4 +16,7 @@ body {
   background: #ffffff;
   color: var(--color-ink);
   font-family: var(--font-sans);
+  /* Long unbroken words (pasted URLs, references) wrap instead of
+     pushing the page wider than a phone screen. */
+  overflow-wrap: anywhere;
 }

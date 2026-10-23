@@ -4,6 +4,10 @@ import {
   listPayments,
   recordPayment,
   downloadReceipt,
+  uploadProof,
+  openProof,
+  checkProofFile,
+  PROOF_ACCEPT,
   type Payment,
   type PaymentMethod,
 } from "../../features/payments/api";
@@ -26,6 +30,11 @@ export default function TenantHome() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  // Changing the key remounts the file input, which is the only way to clear it.
+  const [proofInputKey, setProofInputKey] = useState(0);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [uploadingForId, setUploadingForId] = useState<string | null>(null);
 
   const [complaintTitle, setComplaintTitle] = useState("");
   const [complaintDescription, setComplaintDescription] = useState("");
@@ -67,22 +76,42 @@ export default function TenantHome() {
   async function handleRecordPayment(e: FormEvent) {
     e.preventDefault();
     if (!tenancy) return;
-    setSubmitting(true);
     setFormError(null);
     setFormSuccess(null);
 
+    const fileProblem = proofFile ? checkProofFile(proofFile) : null;
+    if (fileProblem) {
+      setFormError(fileProblem);
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      await recordPayment({
+      const payment = await recordPayment({
         tenancyId: tenancy.id,
         amount: Number(amount),
         method,
         paidAt: paidAt || new Date().toISOString().slice(0, 10),
         reference: reference || undefined,
       });
-      setFormSuccess("Payment recorded. Your landlord will confirm it once received.");
       setAmount("");
       setReference("");
       setPaidAt("");
+
+      if (proofFile) {
+        try {
+          await uploadProof(payment.id, proofFile);
+          setFormSuccess("Payment and proof sent. Your landlord will confirm it once received.");
+        } catch (err) {
+          setFormError(
+            `Payment recorded, but the proof did not upload: ${parseApiError(err).message} You can add it from your payment history.`,
+          );
+        }
+      } else {
+        setFormSuccess("Payment recorded. Your landlord will confirm it once received.");
+      }
+      setProofFile(null);
+      setProofInputKey((key) => key + 1);
       setPayments(await listPayments());
     } catch (err) {
       setFormError(parseApiError(err).message);
@@ -96,7 +125,35 @@ export default function TenantHome() {
     try {
       await downloadReceipt(payment.id, payment.receipt.receiptNumber);
     } catch (err) {
-      setLoadError(parseApiError(err).message);
+      setHistoryError(parseApiError(err).message);
+    }
+  }
+
+  async function handleViewProof(payment: Payment) {
+    setHistoryError(null);
+    try {
+      await openProof(payment.id);
+    } catch (err) {
+      setHistoryError(parseApiError(err).message);
+    }
+  }
+
+  async function handleAddProof(payment: Payment, file: File | undefined) {
+    if (!file) return;
+    setHistoryError(null);
+    const fileProblem = checkProofFile(file);
+    if (fileProblem) {
+      setHistoryError(fileProblem);
+      return;
+    }
+    setUploadingForId(payment.id);
+    try {
+      await uploadProof(payment.id, file);
+      setPayments(await listPayments());
+    } catch (err) {
+      setHistoryError(parseApiError(err).message);
+    } finally {
+      setUploadingForId(null);
     }
   }
 
@@ -126,7 +183,7 @@ export default function TenantHome() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <p className="text-ink">Loading...</p>
       </div>
     );
@@ -134,7 +191,7 @@ export default function TenantHome() {
 
   if (!tenancy) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <h1 className="font-display text-2xl font-extrabold text-night-blue">Welcome back</h1>
         <p className="mt-2 text-ink">
           {loadError ?? "You do not have an active tenancy yet."}
@@ -144,7 +201,7 @@ export default function TenantHome() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <h1 className="font-display text-2xl font-extrabold text-night-blue">
         {tenancy.unit?.property.name} ({tenancy.unit?.label})
       </h1>
@@ -219,6 +276,17 @@ export default function TenantHome() {
             />
           </label>
 
+          <label className="flex flex-col gap-1 text-sm font-bold text-ink">
+            Proof of payment <span className="font-normal text-ink/60">(screenshot or PDF, up to 2 MB)</span>
+            <input
+              key={proofInputKey}
+              type="file"
+              accept={PROOF_ACCEPT}
+              onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+              className="font-sans text-sm font-normal text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-mist file:px-3 file:py-2 file:font-bold file:text-night-blue"
+            />
+          </label>
+
           {formError && <p className="text-sm font-bold text-red-600">{formError}</p>}
           {formSuccess && <p className="text-sm font-bold text-direct-green">{formSuccess}</p>}
 
@@ -235,6 +303,7 @@ export default function TenantHome() {
       <div className="mt-8">
         <h2 className="font-display text-lg font-extrabold text-night-blue">Payment history</h2>
         {payments.length === 0 && <p className="mt-2 text-ink">No payments recorded yet.</p>}
+        {historyError && <p className="mt-2 text-sm font-bold text-red-600">{historyError}</p>}
         <ul className="mt-3 flex flex-col gap-3">
           {payments.map((payment) => (
             <li key={payment.id} className="rounded-xl bg-white p-4 shadow-sm">
@@ -260,15 +329,45 @@ export default function TenantHome() {
               {payment.rejectionReason && (
                 <p className="mt-1 text-sm text-red-600">Reason: {payment.rejectionReason}</p>
               )}
-              {payment.receipt && (
-                <button
-                  type="button"
-                  onClick={() => void handleDownload(payment)}
-                  className="mt-2 text-sm font-bold text-trust-blue hover:underline"
-                >
-                  Download receipt
-                </button>
-              )}
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                {payment.receipt && (
+                  <button
+                    type="button"
+                    onClick={() => void handleDownload(payment)}
+                    className="text-sm font-bold text-trust-blue hover:underline"
+                  >
+                    Download receipt
+                  </button>
+                )}
+                {payment.proof && (
+                  <button
+                    type="button"
+                    onClick={() => void handleViewProof(payment)}
+                    className="text-sm font-bold text-trust-blue hover:underline"
+                  >
+                    View proof
+                  </button>
+                )}
+                {payment.status === "PENDING" && (
+                  <label className="cursor-pointer text-sm font-bold text-trust-blue hover:underline">
+                    {uploadingForId === payment.id
+                      ? "Uploading..."
+                      : payment.proof
+                        ? "Replace proof"
+                        : "Add proof"}
+                    <input
+                      type="file"
+                      accept={PROOF_ACCEPT}
+                      disabled={uploadingForId === payment.id}
+                      onChange={(e) => {
+                        void handleAddProof(payment, e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                      className="sr-only"
+                    />
+                  </label>
+                )}
+              </div>
             </li>
           ))}
         </ul>

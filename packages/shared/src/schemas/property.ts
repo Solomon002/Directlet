@@ -10,7 +10,9 @@ export const createPropertySchema = z.object({
   isPublic: z.boolean().optional().default(true),
 });
 
-export const updatePropertySchema = createPropertySchema.partial();
+// Defaults are dropped before .partial(): Zod still applies them to missing
+// keys, so an edit would otherwise silently make a hidden property public.
+export const updatePropertySchema = createPropertySchema.extend({ isPublic: z.boolean() }).partial();
 
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
 export type UpdatePropertyInput = z.infer<typeof updatePropertySchema>;

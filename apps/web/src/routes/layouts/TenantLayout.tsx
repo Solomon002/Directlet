@@ -11,19 +11,20 @@ export default function TenantLayout() {
 
   return (
     <div className="min-h-screen bg-mist md:flex">
-      <aside className="flex flex-col justify-between bg-trust-blue px-6 py-8 text-white md:w-56">
-        <div>
+      {/* A compact top bar on phones, a sidebar from md up. */}
+      <aside className="flex items-center justify-between gap-4 bg-trust-blue px-4 py-3 text-white md:w-56 md:flex-col md:items-start md:px-6 md:py-8">
+        <div className="flex items-center gap-5 md:block">
           <Link to="/tenant" className="font-display text-lg font-extrabold">
             DirectLet
           </Link>
-          <nav className="mt-8 flex flex-col gap-3 text-sm font-bold">
+          <nav className="flex gap-4 text-sm font-bold md:mt-8 md:flex-col md:gap-3">
             <Link to="/tenant">Home</Link>
           </nav>
         </div>
         <button
           type="button"
           onClick={handleLogout}
-          className="text-left text-sm font-bold text-white/70 hover:text-white"
+          className="shrink-0 whitespace-nowrap text-left text-sm font-bold text-white/70 hover:text-white"
         >
           Log out
         </button>

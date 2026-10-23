@@ -47,6 +47,43 @@ export async function createProperty(input: {
   return res.data.property;
 }
 
+export type PropertyInput = {
+  name: string;
+  address: string;
+  area: string;
+  city: string;
+  state: string;
+  description?: string;
+  isPublic?: boolean;
+};
+
+export type UnitInput = {
+  label: string;
+  bedrooms: number;
+  bathrooms?: number;
+  rentAmount: number;
+  rentFrequency?: string;
+  description?: string;
+};
+
+export async function updateProperty(propertyId: string, input: Partial<PropertyInput>) {
+  const res = await api.patch<{ property: Property }>(`/properties/${propertyId}`, input);
+  return res.data.property;
+}
+
+export async function deleteProperty(propertyId: string) {
+  await api.delete(`/properties/${propertyId}`);
+}
+
+export async function updateUnit(propertyId: string, unitId: string, input: Partial<UnitInput>) {
+  const res = await api.patch<{ unit: Unit }>(`/properties/${propertyId}/units/${unitId}`, input);
+  return res.data.unit;
+}
+
+export async function deleteUnit(propertyId: string, unitId: string) {
+  await api.delete(`/properties/${propertyId}/units/${unitId}`);
+}
+
 export async function createUnit(
   propertyId: string,
   input: {

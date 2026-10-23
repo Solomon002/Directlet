@@ -68,39 +68,52 @@ export default function CompoundPage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-ink">Loading...</div>;
+    return <div className="p-4 sm:p-8 text-ink">Loading...</div>;
   }
 
   if (loadError || !property) {
-    return <div className="p-8 text-sm font-bold text-red-600">{loadError ?? "Listing not found."}</div>;
+    return <div className="p-4 sm:p-8 text-sm font-bold text-red-600">{loadError ?? "Listing not found."}</div>;
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <h1 className="font-display text-2xl font-extrabold text-night-blue">{property.name}</h1>
       <p className="mt-1 text-sm text-ink">
         {property.address}, {property.area}, {property.city}, {property.state}
       </p>
       {property.description && <p className="mt-2 text-ink">{property.description}</p>}
 
-      <h2 className="mt-8 font-display text-lg font-extrabold text-night-blue">Available units</h2>
+      <h2 className="mt-8 font-display text-lg font-extrabold text-night-blue">Flats</h2>
       <ul className="mt-4 flex flex-col gap-3">
         {property.units?.map((unit) => (
           <li key={unit.id} className="rounded-xl bg-white p-4 shadow-sm">
-            <p className="font-display font-extrabold text-night-blue">{unit.label}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-display font-extrabold text-night-blue">{unit.label}</p>
+              <span
+                className={
+                  unit.isVacant
+                    ? "rounded-full bg-direct-green/10 px-3 py-1 text-xs font-bold text-direct-green"
+                    : "rounded-full bg-mist px-3 py-1 text-xs font-bold text-ink/60"
+                }
+              >
+                {unit.isVacant ? "Vacant" : "Let"}
+              </span>
+            </div>
             <p className="text-sm text-ink">
               {unit.bedrooms} bed - {unit.bathrooms ?? "?"} bath - NGN {Number(unit.rentAmount).toLocaleString()} / {unit.rentFrequency.toLowerCase()}
             </p>
 
-            <button
-              type="button"
-              onClick={() => toggleForm(unit.id)}
-              className="mt-2 text-sm font-bold text-trust-blue hover:underline"
-            >
-              {openUnitId === unit.id ? "Cancel" : "Request a viewing"}
-            </button>
+            {unit.isVacant && (
+              <button
+                type="button"
+                onClick={() => toggleForm(unit.id)}
+                className="mt-2 text-sm font-bold text-trust-blue hover:underline"
+              >
+                {openUnitId === unit.id ? "Cancel" : "Request a viewing"}
+              </button>
+            )}
 
-            {openUnitId === unit.id && (
+            {unit.isVacant && openUnitId === unit.id && (
               <form
                 onSubmit={(e) => void handleRequestInspection(e, unit.id)}
                 className="mt-3 flex max-w-sm flex-col gap-3 rounded-xl bg-mist p-4"

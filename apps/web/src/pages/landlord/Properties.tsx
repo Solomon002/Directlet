@@ -56,7 +56,7 @@ export default function Properties() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-extrabold text-night-blue">Properties</h1>
         <button

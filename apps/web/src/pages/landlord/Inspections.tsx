@@ -115,14 +115,14 @@ export default function Inspections() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <p className="text-ink">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <h1 className="font-display text-2xl font-extrabold text-night-blue">Inspection requests</h1>
 
       {loadError && <p className="mt-4 text-sm font-bold text-red-600">{loadError}</p>}

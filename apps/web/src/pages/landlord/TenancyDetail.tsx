@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
-import { getMyTenancy, type Tenancy } from "../../features/tenancies/api";
+import { getMyTenancy, endTenancy, type Tenancy } from "../../features/tenancies/api";
 import {
   listPayments,
   confirmPayment,
   rejectPayment,
   downloadReceipt,
+  openProof,
   type Payment,
 } from "../../features/payments/api";
 import {
@@ -31,6 +32,9 @@ export default function TenancyDetail() {
   const [complaintActingOnId, setComplaintActingOnId] = useState<string | null>(null);
   const [complaintStatusDraft, setComplaintStatusDraft] = useState<Record<string, ComplaintStatus>>({});
   const [complaintNoteDraft, setComplaintNoteDraft] = useState<Record<string, string>>({});
+
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState<string | null>(null);
 
   async function loadData() {
     if (!tenancyId) return;
@@ -91,6 +95,33 @@ export default function TenancyDetail() {
     }
   }
 
+  async function handleViewProof(payment: Payment) {
+    setActionError(null);
+    try {
+      await openProof(payment.id);
+    } catch (err) {
+      setActionError(parseApiError(err).message);
+    }
+  }
+
+  async function handleEndTenancy() {
+    if (!tenancy) return;
+    const confirmed = window.confirm(
+      `End ${tenancy.tenant?.fullName ?? "this tenant"}'s tenancy? The flat becomes vacant and no new rent will be billed. Any unpaid rent stays on record.`,
+    );
+    if (!confirmed) return;
+    setEnding(true);
+    setEndError(null);
+    try {
+      await endTenancy(tenancy.id);
+      await loadData();
+    } catch (err) {
+      setEndError(parseApiError(err).message);
+    } finally {
+      setEnding(false);
+    }
+  }
+
   async function handleUpdateComplaintStatus(complaint: Complaint) {
     setComplaintActingOnId(complaint.id);
     setComplaintActionError(null);
@@ -109,7 +140,7 @@ export default function TenancyDetail() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <p className="text-ink">Loading...</p>
       </div>
     );
@@ -117,7 +148,7 @@ export default function TenancyDetail() {
 
   if (loadError || !tenancy) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <Link to="/landlord/tenancies" className="text-sm font-bold text-trust-blue">
           Back to tenancies
         </Link>
@@ -127,7 +158,7 @@ export default function TenancyDetail() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <Link to="/landlord/tenancies" className="text-sm font-bold text-trust-blue">
         Back to tenancies
       </Link>
@@ -138,7 +169,22 @@ export default function TenancyDetail() {
       <p className="mt-1 text-ink">{tenancy.tenant?.email}</p>
       <p className="mt-1 text-ink">
         NGN {Number(tenancy.rentAmount).toLocaleString()} / {tenancy.rentFrequency.toLowerCase()} - {tenancy.status}
+        {tenancy.endedAt ? ` on ${new Date(tenancy.endedAt).toDateString()}` : ""}
       </p>
+
+      {tenancy.status === "ACTIVE" && (
+        <div className="mt-4">
+          <button
+            type="button"
+            disabled={ending}
+            onClick={() => void handleEndTenancy()}
+            className="rounded-xl border-2 border-red-600 px-4 py-2 font-display font-extrabold text-red-600 disabled:opacity-60"
+          >
+            {ending ? "Ending..." : "End tenancy"}
+          </button>
+          {endError && <p className="mt-2 text-sm font-bold text-red-600">{endError}</p>}
+        </div>
+      )}
 
       <div className="mt-8">
         <h2 className="font-display text-lg font-extrabold text-night-blue">Rent charges</h2>
@@ -183,6 +229,17 @@ export default function TenancyDetail() {
                 {payment.method.replace("_", " ")} - {new Date(payment.paidAt).toDateString()}
                 {payment.reference ? ` - Ref: ${payment.reference}` : ""}
               </p>
+              {payment.proof ? (
+                <button
+                  type="button"
+                  onClick={() => void handleViewProof(payment)}
+                  className="mt-1 text-sm font-bold text-trust-blue hover:underline"
+                >
+                  View proof of payment
+                </button>
+              ) : (
+                <p className="mt-1 text-sm text-ink/60">No proof attached</p>
+              )}
 
               {payment.status === "PENDING" && (
                 <div className="mt-3 flex flex-col gap-2">

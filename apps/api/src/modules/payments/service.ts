@@ -3,6 +3,9 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import type { CreatePaymentInput } from "@directlet/shared";
 
+// Lists say whether proof exists; the file itself is only sent by getProof.
+const proofSummary = { id: true, contentType: true, sizeBytes: true, createdAt: true } as const;
+
 async function getTenancyForTenant(tenantId: string, tenancyId: string) {
   const tenancy = await prisma.tenancy.findFirst({ where: { id: tenancyId, tenantId } });
   if (!tenancy) {
@@ -44,6 +47,7 @@ export async function listForTenant(tenantId: string) {
     include: {
       tenancy: { include: { unit: { include: { property: true } } } },
       receipt: true,
+      proof: { select: proofSummary },
     },
   });
 }
@@ -60,6 +64,7 @@ export async function listForLandlord(landlordId: string) {
         },
       },
       receipt: true,
+      proof: { select: proofSummary },
     },
   });
 }
@@ -154,6 +159,64 @@ export async function rejectPayment(landlordId: string, paymentId: string, rejec
       rejectionReason,
     },
   });
+}
+
+const MAX_PROOF_BYTES = 2 * 1024 * 1024;
+
+// Trust the file's first bytes, not the Content-Type the browser sent.
+const PROOF_SIGNATURES: { contentType: string; matches: (data: Buffer) => boolean }[] = [
+  { contentType: "image/jpeg", matches: (d) => d[0] === 0xff && d[1] === 0xd8 && d[2] === 0xff },
+  { contentType: "image/png", matches: (d) => d.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
+  { contentType: "image/webp", matches: (d) => d.toString("ascii", 0, 4) === "RIFF" && d.toString("ascii", 8, 12) === "WEBP" },
+  { contentType: "application/pdf", matches: (d) => d.toString("ascii", 0, 5) === "%PDF-" },
+];
+
+export const PROOF_CONTENT_TYPES = PROOF_SIGNATURES.map((signature) => signature.contentType);
+export const PROOF_SIZE_LIMIT = MAX_PROOF_BYTES;
+
+export async function attachProof(tenantId: string, paymentId: string, data: Buffer) {
+  const payment = await prisma.payment.findFirst({ where: { id: paymentId, tenancy: { tenantId } } });
+  if (!payment) {
+    throw new AppError(404, "Payment not found", "NOT_FOUND");
+  }
+  if (payment.status !== "PENDING") {
+    throw new AppError(409, "Proof can only be added while the payment is pending", "PAYMENT_ALREADY_REVIEWED");
+  }
+
+  const contentType = PROOF_SIGNATURES.find((signature) => signature.matches(data))?.contentType;
+  if (!contentType) {
+    throw new AppError(415, "Upload a JPG, PNG, WebP image or a PDF", "UNSUPPORTED_FILE_TYPE");
+  }
+
+  // Uploading again replaces the earlier proof. Copying into a plain
+  // Uint8Array gives Prisma the ArrayBuffer-backed bytes it expects.
+  const bytes = new Uint8Array(data);
+  return prisma.paymentProof.upsert({
+    where: { paymentId },
+    create: { paymentId, contentType, sizeBytes: bytes.length, data: bytes },
+    update: { contentType, sizeBytes: bytes.length, data: bytes, createdAt: new Date() },
+    select: { id: true, contentType: true, sizeBytes: true, createdAt: true },
+  });
+}
+
+export async function getProof(userId: string, paymentId: string) {
+  const proof = await prisma.paymentProof.findFirst({
+    where: {
+      paymentId,
+      payment: {
+        OR: [
+          { tenancy: { tenantId: userId } },
+          { tenancy: { unit: { property: { landlordId: userId } } } },
+        ],
+      },
+    },
+  });
+
+  if (!proof) {
+    throw new AppError(404, "Proof not found", "NOT_FOUND");
+  }
+
+  return proof;
 }
 
 export async function getReceiptForDownload(userId: string, paymentId: string) {

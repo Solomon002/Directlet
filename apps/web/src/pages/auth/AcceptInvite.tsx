@@ -61,12 +61,12 @@ export default function AcceptInvite() {
   }
 
   if (loading) {
-    return <div className="p-8 text-ink">Loading...</div>;
+    return <div className="p-4 sm:p-8 text-ink">Loading...</div>;
   }
 
   if (loadError || !info) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <h1 className="font-display text-2xl font-extrabold text-night-blue">Invite not available</h1>
         <p className="mt-2 text-sm font-bold text-red-600">{loadError ?? "This invite link is invalid."}</p>
       </div>

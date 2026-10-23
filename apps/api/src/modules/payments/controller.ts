@@ -44,6 +44,26 @@ export async function reject(req: Request, res: Response) {
   res.status(200).json({ payment });
 }
 
+export async function uploadProof(req: Request, res: Response) {
+  if (req.user!.role !== "TENANT") {
+    throw new AppError(403, "Only a tenant can add proof of payment", "FORBIDDEN");
+  }
+  // express.raw leaves an empty object when the Content-Type is not an accepted file type.
+  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    throw new AppError(415, "Upload a JPG, PNG, WebP image or a PDF", "UNSUPPORTED_FILE_TYPE");
+  }
+  const proof = await paymentService.attachProof(userId(req), req.params.paymentId as string, req.body);
+  res.status(201).json({ proof });
+}
+
+export async function downloadProof(req: Request, res: Response) {
+  const proof = await paymentService.getProof(userId(req), req.params.paymentId as string);
+  res.setHeader("Content-Type", proof.contentType);
+  res.setHeader("Content-Disposition", "inline");
+  res.setHeader("Cache-Control", "private, no-store");
+  res.send(Buffer.from(proof.data));
+}
+
 export async function downloadReceipt(req: Request, res: Response) {
   const payment = await paymentService.getReceiptForDownload(userId(req), req.params.paymentId as string);
 

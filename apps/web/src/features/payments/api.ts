@@ -17,6 +17,7 @@ export type Payment = {
   rejectionReason: string | null;
   createdAt: string;
   receipt?: { id: string; receiptNumber: string; issuedAt: string } | null;
+  proof?: { id: string; contentType: string; sizeBytes: number; createdAt: string } | null;
   tenancy?: {
     id: string;
     unit?: { id: string; label: string; property: { id: string; name: string } };
@@ -48,6 +49,40 @@ export async function confirmPayment(paymentId: string) {
 export async function rejectPayment(paymentId: string, rejectionReason?: string) {
   const res = await api.post<{ payment: Payment }>(`/payments/${paymentId}/reject`, { rejectionReason });
   return res.data.payment;
+}
+
+export const PROOF_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
+export const PROOF_MAX_BYTES = 2 * 1024 * 1024;
+
+// Returns an error message, or null when the file is fine to upload.
+export function checkProofFile(file: File): string | null {
+  if (!PROOF_ACCEPT.split(",").includes(file.type)) return "Upload a JPG, PNG, WebP image or a PDF";
+  if (file.size > PROOF_MAX_BYTES) return "That file is over 2 MB. Try a screenshot instead.";
+  return null;
+}
+
+export async function uploadProof(paymentId: string, file: File) {
+  const res = await api.post(`/payments/${paymentId}/proof`, file, {
+    headers: { "Content-Type": file.type },
+  });
+  return res.data;
+}
+
+// Opens the tab before the download starts, so popup blockers allow it.
+export async function openProof(paymentId: string) {
+  const tab = window.open("", "_blank");
+  try {
+    const res = await api.get(`/payments/${paymentId}/proof`, { responseType: "blob" });
+    const url = window.URL.createObjectURL(res.data as Blob);
+    if (tab) {
+      tab.location.href = url;
+    } else {
+      window.location.href = url;
+    }
+  } catch (err) {
+    tab?.close();
+    throw err;
+  }
 }
 
 export async function downloadReceipt(paymentId: string, receiptNumber: string) {

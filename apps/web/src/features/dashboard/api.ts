@@ -72,6 +72,7 @@ const ACTION_LABELS: Record<string, string> = {
   "POST /payments": "recorded a payment",
   "POST /payments/:id/confirm": "confirmed a payment",
   "POST /payments/:id/reject": "rejected a payment",
+  "POST /payments/:id/proof": "uploaded proof of payment",
   "POST /complaints": "filed a complaint",
   "POST /complaints/:id/status": "updated a complaint",
   "POST /inspections/:id/schedule": "scheduled a viewing",

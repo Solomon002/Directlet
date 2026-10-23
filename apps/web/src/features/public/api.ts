@@ -8,6 +8,7 @@ export type PublicUnit = {
   rentAmount: string;
   rentFrequency: string;
   description: string | null;
+  isVacant: boolean;
 };
 
 export type PublicProperty = {
@@ -18,7 +19,8 @@ export type PublicProperty = {
   city: string;
   state: string;
   description: string | null;
-  _count?: { units: number };
+  unitCount?: number;
+  vacantUnitCount?: number;
   units?: PublicUnit[];
 };
 

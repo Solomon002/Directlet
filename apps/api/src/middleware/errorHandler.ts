@@ -27,6 +27,18 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
 
+  // Body parser errors (bad JSON, body too large) carry their own 4xx status.
+  const status = (err as { status?: unknown }).status;
+  if (typeof status === "number" && status >= 400 && status < 500) {
+    res.status(status).json({
+      error:
+        status === 413
+          ? { code: "PAYLOAD_TOO_LARGE", message: "That file or request is too large" }
+          : { code: "BAD_REQUEST", message: "The request could not be read" },
+    });
+    return;
+  }
+
   // Unknown error: log it on the server, tell the client nothing useful to an attacker.
   console.error(err);
   res.status(500).json({
