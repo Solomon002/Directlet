@@ -12,3 +12,4 @@ export * from "./schemas/unit";
 export * from "./schemas/tenancy";
 export * from "./schemas/payment";
 export * from "./schemas/complaint";
+export * from "./schemas/inspection";

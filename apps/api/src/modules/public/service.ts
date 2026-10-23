@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import type { CreateInspectionRequestInput } from "@directlet/shared";
 
 type ListPublicPropertiesParams = {
   city?: string;
@@ -43,4 +44,23 @@ export async function getPublicProperty(propertyId: string) {
   }
 
   return property;
+}
+
+export async function createInspectionRequest(unitId: string, input: CreateInspectionRequestInput) {
+  const unit = await prisma.unit.findFirst({ where: { id: unitId, property: { isPublic: true } } });
+
+  if (!unit) {
+    throw new AppError(404, "Unit not found", "NOT_FOUND");
+  }
+
+  return prisma.inspectionRequest.create({
+    data: {
+      unitId: unit.id,
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      message: input.message,
+      preferredDate: input.preferredDate,
+    },
+  });
 }

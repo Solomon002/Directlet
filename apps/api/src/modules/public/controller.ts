@@ -15,3 +15,11 @@ export async function getProperty(req: Request, res: Response) {
   const property = await publicService.getPublicProperty(req.params.propertyId as string);
   res.status(200).json({ property });
 }
+
+export async function createInspectionRequest(req: Request, res: Response) {
+  const inspectionRequest = await publicService.createInspectionRequest(
+    req.params.unitId as string,
+    req.body,
+  );
+  res.status(201).json({ inspectionRequest });
+}

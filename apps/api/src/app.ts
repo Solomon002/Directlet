@@ -12,6 +12,7 @@ import { publicRouter } from "./modules/public/routes";
 import { tenanciesRouter } from "./modules/tenancies/routes";
 import { paymentsRouter } from "./modules/payments/routes";
 import { complaintsRouter } from "./modules/complaints/routes";
+import { inspectionsRouter } from "./modules/inspections/routes";
 
 export const app = express();
 
@@ -40,6 +41,7 @@ app.use("/public", publicRouter);
 app.use("/tenancies", tenanciesRouter);
 app.use("/payments", paymentsRouter);
 app.use("/complaints", complaintsRouter);
+app.use("/inspections", inspectionsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
