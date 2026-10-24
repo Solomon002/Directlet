@@ -1,6 +1,6 @@
-# Tests the admin panel API: granting admin, overview numbers, visit counting,
+﻿# Tests the admin panel API: granting admin, overview numbers, visit counting,
 # user search, suspension, and taking listings down. Creates its own accounts.
-$apiBase = "http://localhost:4000"
+$apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $json = "application/json"
 

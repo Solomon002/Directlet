@@ -1,5 +1,5 @@
 ﻿# Adjust this if your api dev server runs on a different port.
-$apiBase = "http://localhost:4000"
+$apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
 $landlordLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = "demo@directlet.ng"; password = "DemoPass123!" } | ConvertTo-Json) -SessionVariable landlordSession

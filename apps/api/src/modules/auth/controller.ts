@@ -11,7 +11,7 @@ const cookieBase = {
   httpOnly: true,
   secure: env.NODE_ENV === "production",
   sameSite: "strict",
-  path: "/auth",
+  path: env.REFRESH_COOKIE_PATH,
 } as const;
 
 function setRefreshCookie(res: Response, token: string, expiresAt: Date) {

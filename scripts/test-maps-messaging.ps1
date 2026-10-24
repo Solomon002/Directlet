@@ -1,6 +1,6 @@
-# Tests map locations, house hunter accounts, and in-app messaging. Creates a
+﻿# Tests map locations, house hunter accounts, and in-app messaging. Creates a
 # test property with a pin, a hunter and a tenant, and hides the property at the end.
-$apiBase = "http://localhost:4000"
+$apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
 $json = "application/json"
 
 function Expect-Status($label, $expected, [scriptblock]$call) {

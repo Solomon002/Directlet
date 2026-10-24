@@ -1,14 +1,14 @@
 {
   "name": "directlet",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "DirectLet: rental homes in Nigeria, direct from the owner.",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:vercel": "node scripts/build-vercel.mjs"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "engines": {
+    "node": "22.x"
+  },
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
@@ -19,6 +19,7 @@
   "packageManager": "pnpm@12.11.2",
   "type": "module",
   "devDependencies": {
+    "esbuild": "0.28.2",
     "typescript": "^7.0.2"
   }
 }

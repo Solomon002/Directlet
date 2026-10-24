@@ -1,7 +1,7 @@
-# Tests vacancy, viewing blocks, proof of payment, ending a tenancy, and
+﻿# Tests vacancy, viewing blocks, proof of payment, ending a tenancy, and
 # editing/deleting properties and flats. Creates its own test property and
 # hides it from the marketplace at the end.
-$apiBase = "http://localhost:4000"
+$apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
 
 function Get-StatusCode($err) {
   return [int]$err.Exception.Response.StatusCode

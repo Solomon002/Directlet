@@ -16,6 +16,14 @@ const envSchema = z
     JWT_REFRESH_SECRET: z.string().min(32, "must be at least 32 characters"),
     JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
     JWT_REFRESH_EXPIRES_IN: z.string().default("30d"),
+    // The browser path the login cookie is limited to. Online, the API sits
+    // under /api on the same address as the website, so it is /api/auth there.
+    REFRESH_COOKIE_PATH: z.string().startsWith("/").default("/auth"),
+    // How many proxies sit in front of the API (Vercel is 1), so the real
+    // visitor IP is used for rate limits. 0 when running on a laptop.
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    // Lets Vercel's scheduler call the rent roll job. Unset turns the route off.
+    CRON_SECRET: z.string().min(16).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.JWT_ACCESS_SECRET === value.JWT_REFRESH_SECRET) {

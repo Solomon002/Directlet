@@ -19,6 +19,7 @@ import { remindersRouter } from "./modules/reminders/routes";
 import { conversationsRouter } from "./modules/conversations/routes";
 import { analyticsRouter } from "./modules/analytics/routes";
 import { adminRouter } from "./modules/admin/routes";
+import { jobsRouter } from "./modules/jobs/routes";
 
 export const app = express();
 
@@ -28,6 +29,9 @@ function noStore(_req: Request, res: Response, next: NextFunction) {
 }
 
 app.disable("x-powered-by");
+if (env.TRUST_PROXY_HOPS > 0) {
+  app.set("trust proxy", env.TRUST_PROXY_HOPS);
+}
 app.use(helmet());
 app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }));
 app.use(express.json({ limit: "100kb" }));
@@ -54,6 +58,7 @@ app.use("/reminders", remindersRouter);
 app.use("/conversations", noStore, conversationsRouter);
 app.use("/analytics", analyticsRouter);
 app.use("/admin", noStore, adminRouter);
+app.use("/jobs", noStore, jobsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

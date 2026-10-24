@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { waitUntil } from "@vercel/functions";
 import { prisma } from "../lib/prisma";
 
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -56,6 +57,20 @@ export function auditLog(req: Request, res: Response, next: NextFunction) {
     return originalJson(body);
   };
 
+  // Online, the function can be frozen the moment the response is sent. This
+  // asks the platform to keep it alive until the log row is written. Locally
+  // it does nothing.
+  let release: () => void = () => undefined;
+  waitUntil(
+    new Promise<void>((resolve) => {
+      release = resolve;
+    }),
+  );
+  // A request that dies before it finishes has nothing to record.
+  res.on("close", () => {
+    if (!res.writableFinished) release();
+  });
+
   res.on("finish", () => {
     const { path, entity, entityId } = describePath(req.originalUrl);
     const created = !entityId && res.statusCode < 300 && !path.startsWith("/auth") ? createdRecord(responseBody) : null;
@@ -80,7 +95,8 @@ export function auditLog(req: Request, res: Response, next: NextFunction) {
       })
       .catch((error: unknown) => {
         console.error("Failed to write audit log", error);
-      });
+      })
+      .finally(release);
   });
 
   next();
