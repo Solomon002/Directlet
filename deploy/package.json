@@ -1,0 +1,8 @@
+{
+  "name": "directlet-deploy",
+  "private": true,
+  "description": "Vercel's Root Directory. It holds no app on purpose, so Vercel does not try to split the repo into separate services. The real build runs from the repo root (see vercel.json).",
+  "engines": {
+    "node": "22.x"
+  }
+}

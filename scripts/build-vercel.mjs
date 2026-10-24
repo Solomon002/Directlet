@@ -1,8 +1,9 @@
 // Builds DirectLet for Vercel using the Build Output API, so the layout is
-// exactly what Vercel runs and nothing is guessed:
-//   .vercel/output/static                the website (apps/web/dist)
-//   .vercel/output/functions/api.func    the API as one bundled file
-//   .vercel/output/config.json           routes, headers and the daily cron
+// exactly what Vercel runs and nothing is guessed. Vercel's Root Directory is
+// deploy/, so the output goes there:
+//   deploy/.vercel/output/static                the website (apps/web/dist)
+//   deploy/.vercel/output/functions/api.func    the API as one bundled file
+//   deploy/.vercel/output/config.json           routes, headers and the daily cron
 //
 // Run from the repo root:  pnpm run build:vercel
 import { execFileSync } from "node:child_process";
@@ -13,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const out = join(root, ".vercel", "output");
+const out = join(root, "deploy", ".vercel", "output");
 const fn = join(out, "functions", "api.func");
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 

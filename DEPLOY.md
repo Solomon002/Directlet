@@ -12,8 +12,12 @@ the routes, and a daily job that issues the next rent charges.
 
 1. Push this repo to GitHub (keep it private).
 2. On vercel.com choose **Add New > Project** and import the repo.
-3. Leave **Root Directory** as the repo root. `vercel.json` already sets the
-   install and build commands, so there is nothing else to change.
+3. Set **Root Directory** to **`deploy`**, not the repo root. Vercel finds two
+   apps in this repo (`apps/api` and `apps/web`) and, from the root, forces you to
+   import them as separate projects or configure "services". The `deploy` folder
+   holds no app, only `vercel.json`, whose commands run the real build from the
+   repo root. Do not click "Import single project" for `api` or `web`. Pick
+   **Other** as the Framework Preset and leave the commands alone.
 4. Before the first deploy, add the environment variables below (**Settings >
    Environment Variables**, tick Production, Preview and Development).
 5. Under **Settings > Functions**, set **Function Region** to **Dublin (dub1)**,
