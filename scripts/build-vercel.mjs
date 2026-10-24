@@ -1,9 +1,12 @@
 // Builds DirectLet for Vercel using the Build Output API, so the layout is
-// exactly what Vercel runs and nothing is guessed. Vercel's Root Directory is
-// deploy/, so the output goes there:
-//   deploy/.vercel/output/static                the website (apps/web/dist)
-//   deploy/.vercel/output/functions/api.func    the API as one bundled file
-//   deploy/.vercel/output/config.json           routes, headers and the daily cron
+// exactly what Vercel runs and nothing is guessed:
+//   .vercel/output/static                the website (apps/web/dist)
+//   .vercel/output/functions/api.func    the API as one bundled file
+//   .vercel/output/config.json           routes, headers and the daily cron
+//
+// Vercel reads .vercel/output from the project's Root Directory. That is the
+// repo root normally, or deploy/ if the project uses it, so the finished output
+// is also copied to deploy/.vercel/output and either setting works.
 //
 // Run from the repo root:  pnpm run build:vercel
 import { execFileSync } from "node:child_process";
@@ -14,7 +17,8 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const out = join(root, "deploy", ".vercel", "output");
+const out = join(root, ".vercel", "output");
+const outForDeployDir = join(root, "deploy", ".vercel", "output");
 const fn = join(out, "functions", "api.func");
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
@@ -130,4 +134,7 @@ writeFileSync(
   ),
 );
 
-console.log(`\nBuilt ${out}`);
+rmSync(outForDeployDir, { recursive: true, force: true });
+cpSync(out, outForDeployDir, { recursive: true });
+
+console.log(`\nBuilt ${out}\nCopied to ${outForDeployDir}`);
