@@ -79,6 +79,18 @@ const ACTION_LABELS: Record<string, string> = {
   "POST /inspections/:id/decline": "declined a viewing",
   "POST /inspections/:id/complete": "completed a viewing",
   "POST /inspections/:id/convert": "converted a viewing to a tenancy",
+  "POST /conversations": "started a chat",
+  "POST /conversations/:id/messages": "sent a message",
+  "POST /public/units/:id/inspection-requests": "requested a viewing",
+  "POST /auth/register": "signed up",
+  "POST /auth/login": "logged in",
+  "POST /auth/logout": "logged out",
+  "POST /auth/refresh": "renewed their session",
+  "POST /auth/invite/:id/accept": "accepted a tenant invite",
+  "POST /admin/users/:id/suspend": "suspended a user",
+  "POST /admin/users/:id/unsuspend": "lifted a suspension",
+  "POST /admin/properties/:id/hide": "took down a listing",
+  "POST /admin/properties/:id/unhide": "restored a listing",
 };
 
 export function describeActivity(entry: ActivityEntry) {

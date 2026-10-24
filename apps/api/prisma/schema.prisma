@@ -10,11 +10,13 @@ datasource db {
 // ---------- Enums ----------
 
 // HUNTER is a house hunter: browses, messages landlords. Becomes TENANT when
-// a landlord gives them a tenancy.
+// a landlord gives them a tenancy. ADMIN runs the platform; it is never
+// self-registered, only granted with the admin:grant script.
 enum UserRole {
   LANDLORD
   TENANT
   HUNTER
+  ADMIN
 }
 
 enum RentFrequency {
@@ -43,6 +45,10 @@ model User {
   idDocumentPath  String?
   inviteToken     String?   @unique
   inviteExpiresAt DateTime?
+  // Set by an admin. A suspended user cannot log in, and a suspended
+  // landlord's properties disappear from the marketplace.
+  suspendedAt     DateTime?
+  suspendedReason String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -72,6 +78,10 @@ model Property {
   // a property without one simply has no map or directions.
   latitude    Float?
   longitude   Float?
+  // Set by an admin (e.g. a scam listing). Overrides isPublic: the landlord
+  // cannot re-list it until an admin clears this.
+  hiddenByAdminAt     DateTime?
+  hiddenByAdminReason String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -340,6 +350,21 @@ model Message {
   sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+}
+
+// One row per page a visitor opens. No cookies and no IP address: visitorHash
+// is a hash of IP + browser + a salt that changes daily, so a visitor can be
+// counted once per day but never tracked across days or identified.
+model PageView {
+  id          String   @id @default(uuid()) @db.Uuid
+  day         DateTime @db.Date
+  path        String
+  referrer    String?
+  visitorHash String
+  createdAt   DateTime @default(now())
+
+  @@index([day])
+  @@index([day, visitorHash])
 }
 
 // One row per refresh token issued. The row id is the token jti.

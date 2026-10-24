@@ -23,6 +23,12 @@ function toAuthUser(user: {
   return { id: user.id, email: user.email, fullName: user.fullName, role: user.role };
 }
 
+function assertNotSuspended(user: { suspendedAt: Date | null }) {
+  if (user.suspendedAt) {
+    throw new AppError(403, "This account is suspended. Contact DirectLet support.", "ACCOUNT_SUSPENDED");
+  }
+}
+
 function unauthenticated() {
   return new AppError(401, "Invalid or expired session", "UNAUTHENTICATED");
 }
@@ -103,6 +109,8 @@ export async function login(input: LoginInput) {
   if (!user || !user.passwordHash || !valid) {
     throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
+  // Only after the password check, so this never reveals which emails exist.
+  assertNotSuspended(user);
 
   const tokens = await issueTokens(user);
   return { user: toAuthUser(user), ...tokens };
@@ -137,7 +145,7 @@ export async function rotateRefreshToken(token: string) {
 
   // The role always comes from the database, never from the token.
   const user = await prisma.user.findUnique({ where: { id: stored.userId } });
-  if (!user) {
+  if (!user || user.suspendedAt) {
     throw unauthenticated();
   }
 
@@ -182,6 +190,7 @@ export async function acceptInvite(token: string, password: string) {
   if (!user || !user.inviteExpiresAt || user.inviteExpiresAt.getTime() <= Date.now()) {
     throw new AppError(410, "This invite link is invalid or has expired", "INVITE_EXPIRED");
   }
+  assertNotSuspended(user);
 
   const passwordHash = await hashPassword(password);
 

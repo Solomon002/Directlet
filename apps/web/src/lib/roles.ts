@@ -3,6 +3,7 @@ import type { UserRole } from "../stores/authStore";
 export function homePathFor(role: UserRole): string {
   if (role === "LANDLORD") return "/landlord";
   if (role === "TENANT") return "/tenant";
+  if (role === "ADMIN") return "/admin";
   return "/compounds";
 }
 

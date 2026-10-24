@@ -12,11 +12,18 @@ export default function StartConversation({
   target,
   buttonLabel,
   initialText,
+  variant = "link",
 }: {
   target: { propertyId?: string; unitId?: string; tenancyId?: string };
   buttonLabel: string;
   initialText: string;
+  // "button" is the solid brand button used on listing cards.
+  variant?: "link" | "button";
 }) {
+  const triggerClass =
+    variant === "button"
+      ? "inline-block rounded-xl bg-trust-blue px-4 py-2 font-display text-sm font-extrabold text-white"
+      : "text-sm font-bold text-trust-blue hover:underline";
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,7 +37,7 @@ export default function StartConversation({
       <Link
         to="/register?as=hunter"
         state={{ from: location }}
-        className="text-sm font-bold text-trust-blue hover:underline"
+        className={triggerClass}
       >
         {buttonLabel}
       </Link>
@@ -56,7 +63,7 @@ export default function StartConversation({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-sm font-bold text-trust-blue hover:underline"
+        className={triggerClass}
       >
         {open ? "Cancel" : buttonLabel}
       </button>

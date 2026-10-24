@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
-    "jobs:rent-roll": "tsx src/jobs/runRentRoll.ts"
+    "jobs:rent-roll": "tsx src/jobs/runRentRoll.ts",
+    "admin:grant": "tsx src/jobs/grantAdmin.ts"
   },
   "dependencies": {
     "@directlet/shared": "workspace:*",

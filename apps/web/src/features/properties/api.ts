@@ -22,6 +22,8 @@ export type Property = {
   isPublic: boolean;
   latitude: number | null;
   longitude: number | null;
+  hiddenByAdminAt?: string | null;
+  hiddenByAdminReason?: string | null;
   _count?: { units: number };
   units?: Unit[];
 };

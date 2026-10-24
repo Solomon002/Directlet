@@ -41,7 +41,9 @@ export default function PublicLayout() {
             </>
           )}
           {user && user.role !== "HUNTER" && (
-            <Link to={homePathFor(user.role)}>{user.role === "LANDLORD" ? "Dashboard" : "My home"}</Link>
+            <Link to={homePathFor(user.role)}>
+              {user.role === "LANDLORD" ? "Dashboard" : user.role === "ADMIN" ? "Admin" : "My home"}
+            </Link>
           )}
         </nav>
       </header>

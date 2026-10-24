@@ -11,7 +11,7 @@ export type JwtPayload = {
 // A verified token also carries an id and expiry, used to rotate and revoke.
 export type VerifiedToken = JwtPayload & { jti: string; exp: number };
 
-const VALID_ROLES: readonly UserRole[] = ["LANDLORD", "TENANT", "HUNTER"];
+const VALID_ROLES: readonly UserRole[] = ["LANDLORD", "TENANT", "HUNTER", "ADMIN"];
 
 const ISSUER = "directlet-api";
 const ALGORITHM = "HS256";

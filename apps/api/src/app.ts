@@ -17,6 +17,8 @@ import { inspectionsRouter } from "./modules/inspections/routes";
 import { dashboardRouter } from "./modules/dashboard/routes";
 import { remindersRouter } from "./modules/reminders/routes";
 import { conversationsRouter } from "./modules/conversations/routes";
+import { analyticsRouter } from "./modules/analytics/routes";
+import { adminRouter } from "./modules/admin/routes";
 
 export const app = express();
 
@@ -50,6 +52,8 @@ app.use("/inspections", inspectionsRouter);
 app.use("/dashboard", dashboardRouter);
 app.use("/reminders", remindersRouter);
 app.use("/conversations", noStore, conversationsRouter);
+app.use("/analytics", analyticsRouter);
+app.use("/admin", noStore, adminRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

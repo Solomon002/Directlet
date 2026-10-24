@@ -7,6 +7,7 @@ import { DirectionsPanel } from "../../features/maps/LocationTools";
 import { hasLocation } from "../../features/maps/geo";
 import StartConversation from "../../features/messages/StartConversation";
 import { useAuthStore } from "../../stores/authStore";
+import { formatRent } from "../../lib/money";
 
 export default function CompoundPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -114,7 +115,8 @@ export default function CompoundPage() {
               </span>
             </div>
             <p className="text-sm text-ink">
-              {unit.bedrooms} bed - {unit.bathrooms ?? "?"} bath - NGN {Number(unit.rentAmount).toLocaleString()} / {unit.rentFrequency.toLowerCase()}
+              {unit.bedrooms} bed{unit.bathrooms != null ? ` - ${unit.bathrooms} bath` : ""} -{" "}
+              <span className="font-bold text-trust-blue">{formatRent(unit.rentAmount, unit.rentFrequency)}</span>
             </p>
 
             {unit.isVacant && (
@@ -129,7 +131,7 @@ export default function CompoundPage() {
                 {user?.role !== "LANDLORD" && (
                   <StartConversation
                     target={{ propertyId: property.id, unitId: unit.id }}
-                    buttonLabel="Message landlord"
+                    buttonLabel="Message owner"
                     initialText={`Hello, is ${unit.label} at ${property.name} still available?`}
                   />
                 )}

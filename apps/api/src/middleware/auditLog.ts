@@ -43,7 +43,8 @@ function createdRecord(body: unknown): { entity: string; entityId: string } | nu
 }
 
 export function auditLog(req: Request, res: Response, next: NextFunction) {
-  if (!STATE_CHANGING_METHODS.has(req.method)) {
+  // Page-view counting is not an action anyone took; it has its own table.
+  if (!STATE_CHANGING_METHODS.has(req.method) || req.originalUrl.startsWith("/analytics")) {
     next();
     return;
   }
@@ -58,11 +59,17 @@ export function auditLog(req: Request, res: Response, next: NextFunction) {
   res.on("finish", () => {
     const { path, entity, entityId } = describePath(req.originalUrl);
     const created = !entityId && res.statusCode < 300 && !path.startsWith("/auth") ? createdRecord(responseBody) : null;
+    // Login, sign-up and invite acceptance have no signed-in user yet; the
+    // user they produced is in the response.
+    const authUserId =
+      path.startsWith("/auth") && res.statusCode < 300
+        ? ((responseBody as { user?: { id?: unknown } } | undefined)?.user?.id as string | undefined)
+        : undefined;
 
     prisma.auditLog
       .create({
         data: {
-          userId: req.user?.sub ?? null,
+          userId: req.user?.sub ?? (typeof authUserId === "string" ? authUserId : null),
           method: req.method,
           path,
           statusCode: res.statusCode,

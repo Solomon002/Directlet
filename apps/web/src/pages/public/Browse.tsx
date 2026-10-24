@@ -4,6 +4,58 @@ import { listPublicProperties, type PublicProperty } from "../../features/public
 import { parseApiError } from "../../lib/errors";
 import { PlacesMap } from "../../features/maps/Maps";
 import { hasLocation } from "../../features/maps/geo";
+import StartConversation from "../../features/messages/StartConversation";
+import { useAuthStore } from "../../stores/authStore";
+import { formatRent } from "../../lib/money";
+
+function bedroomText(min?: number | null, max?: number | null) {
+  if (min == null || max == null) return null;
+  return min === max ? `${min} bed` : `${min}-${max} bed`;
+}
+
+// Follows the brand manual's listing card: title, "Area, city / beds",
+// "price / year", then Message owner. The "Verified owner" badge waits until
+// owners are actually verified.
+function ListingCard({ property }: { property: PublicProperty }) {
+  const user = useAuthStore((s) => s.user);
+  const beds = bedroomText(property.bedroomsMin, property.bedroomsMax);
+  const vacant = property.vacantUnitCount ?? 0;
+  const hasRange = vacant > 1 || (vacant === 0 && (property.unitCount ?? 0) > 1);
+
+  return (
+    <div className="flex flex-col rounded-xl bg-white p-5 shadow-sm">
+      <Link to={`/compounds/${property.id}`} className="font-display text-lg font-extrabold text-night-blue hover:underline">
+        {property.name}
+      </Link>
+      <p className="mt-1 text-sm text-ink">
+        {property.area}, {property.city}
+        {beds ? ` / ${beds}` : ""}
+      </p>
+      {property.priceFrom && (
+        <p className="mt-2 font-display text-lg font-extrabold text-trust-blue">
+          {hasRange ? "From " : ""}
+          {formatRent(property.priceFrom.amount, property.priceFrom.frequency)}
+        </p>
+      )}
+      <p className={vacant ? "mt-1 text-sm font-bold text-direct-green" : "mt-1 text-sm font-bold text-ink/60"}>
+        {vacant ? `${vacant} flat${vacant === 1 ? "" : "s"} available` : "Fully let"}
+      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        {vacant > 0 && user?.role !== "LANDLORD" && (
+          <StartConversation
+            target={{ propertyId: property.id }}
+            buttonLabel="Message owner"
+            initialText={`Hello, I'm interested in a flat at ${property.name}. Is one still available?`}
+            variant="button"
+          />
+        )}
+        <Link to={`/compounds/${property.id}`} className="text-sm font-bold text-trust-blue hover:underline">
+          See flats{property.latitude != null ? " and directions" : ""}
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 export default function Browse() {
   // Filters live in the URL so a filtered search can be shared as a link.
@@ -137,11 +189,16 @@ export default function Browse() {
                   <p className="text-xs">
                     {property.area}, {property.city}
                   </p>
+                  {property.priceFrom && (
+                    <p className="text-xs font-bold text-trust-blue">
+                      {formatRent(property.priceFrom.amount, property.priceFrom.frequency)}
+                    </p>
+                  )}
                   <p className="text-xs font-bold">
-                    {property.vacantUnitCount ? `${property.vacantUnitCount} vacant` : "Fully let"}
+                    {property.vacantUnitCount ? `${property.vacantUnitCount} available` : "Fully let"}
                   </p>
                   <Link to={`/compounds/${property.id}`} className="text-xs font-bold text-trust-blue">
-                    View flats and directions
+                    See flats and directions
                   </Link>
                 </div>
               )}
@@ -159,27 +216,7 @@ export default function Browse() {
 
       <div className={`mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${view === "map" ? "hidden" : ""}`}>
         {properties.map((property) => (
-          <Link
-            key={property.id}
-            to={`/compounds/${property.id}`}
-            className="rounded-xl bg-white p-5 shadow-sm"
-          >
-            <p className="font-display text-lg font-extrabold text-night-blue">{property.name}</p>
-            <p className="mt-1 text-sm text-ink">
-              {property.area}, {property.city}
-            </p>
-            <p
-              className={
-                property.vacantUnitCount
-                  ? "mt-2 text-sm font-bold text-direct-green"
-                  : "mt-2 text-sm font-bold text-ink/60"
-              }
-            >
-              {property.vacantUnitCount
-                ? `${property.vacantUnitCount} of ${property.unitCount} flat(s) vacant`
-                : "Fully let"}
-            </p>
-          </Link>
+          <ListingCard key={property.id} property={property} />
         ))}
       </div>
     </div>

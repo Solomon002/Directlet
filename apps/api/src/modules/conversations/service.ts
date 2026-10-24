@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import type { JwtPayload } from "../../lib/jwt";
+import { publiclyVisible } from "../public/service";
 import type { StartConversationInput } from "@directlet/shared";
 
 const MESSAGE_PAGE = 200;
@@ -40,7 +41,7 @@ async function resolveThread(user: JwtPayload, input: StartConversationInput) {
   const property = await prisma.property.findFirst({
     where: {
       id: input.propertyId,
-      OR: [{ isPublic: true }, { units: { some: { tenancies: { some: { tenantId: user.sub } } } } }],
+      OR: [publiclyVisible, { units: { some: { tenancies: { some: { tenantId: user.sub } } } } }],
     },
   });
   if (!property) {

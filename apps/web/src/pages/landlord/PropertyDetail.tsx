@@ -12,6 +12,7 @@ import {
   type UnitInput,
 } from "../../features/properties/api";
 import { parseApiError } from "../../lib/errors";
+import { formatRent } from "../../lib/money";
 import { PlaceMap } from "../../features/maps/Maps";
 import { LocationPicker } from "../../features/maps/LocationTools";
 import { hasLocation, type LatLng } from "../../features/maps/geo";
@@ -307,8 +308,19 @@ export default function PropertyDetail() {
             {property.address}, {property.area}, {property.city}, {property.state}
           </p>
           <p className="mt-1 text-sm font-bold text-ink/60">
-            {property.isPublic ? "Listed on the marketplace" : "Hidden from the marketplace"}
+            {property.hiddenByAdminAt
+              ? "Taken down by DirectLet"
+              : property.isPublic
+                ? "Listed on the marketplace"
+                : "Hidden from the marketplace"}
           </p>
+          {property.hiddenByAdminAt && (
+            <p className="mt-2 max-w-xl rounded-xl border-l-4 border-red-600 bg-white p-3 text-sm text-ink shadow-sm">
+              DirectLet support has removed this listing from the marketplace
+              {property.hiddenByAdminReason ? `: ${property.hiddenByAdminReason}` : "."} You can still manage your
+              tenants here. Contact support to have it restored.
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <button
@@ -384,9 +396,8 @@ export default function PropertyDetail() {
               <div>
                 <p className="font-display font-extrabold text-night-blue">{unit.label}</p>
                 <p className="text-sm text-ink">
-                  {unit.bedrooms} bed - {unit.bathrooms ?? "?"} bath - NGN{" "}
-                  {Number(unit.rentAmount).toLocaleString()} /{" "}
-                  {(frequencyLabels[unit.rentFrequency] ?? unit.rentFrequency).toLowerCase()}
+                  {unit.bedrooms} bed{unit.bathrooms != null ? ` - ${unit.bathrooms} bath` : ""} -{" "}
+                  {formatRent(unit.rentAmount, unit.rentFrequency)}
                 </p>
               </div>
               <div className="flex gap-4">

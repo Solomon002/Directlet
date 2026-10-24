@@ -17,6 +17,7 @@ import {
 } from "../../features/complaints/api";
 import { parseApiError } from "../../lib/errors";
 import StartConversation from "../../features/messages/StartConversation";
+import { formatRent } from "../../lib/money";
 
 export default function TenancyDetail() {
   const { tenancyId } = useParams<{ tenancyId: string }>();
@@ -169,7 +170,7 @@ export default function TenancyDetail() {
       </h1>
       <p className="mt-1 text-ink">{tenancy.tenant?.email}</p>
       <p className="mt-1 text-ink">
-        NGN {Number(tenancy.rentAmount).toLocaleString()} / {tenancy.rentFrequency.toLowerCase()} - {tenancy.status}
+        {formatRent(tenancy.rentAmount, tenancy.rentFrequency)} - {tenancy.status}
         {tenancy.endedAt ? ` on ${new Date(tenancy.endedAt).toDateString()}` : ""}
       </p>
 

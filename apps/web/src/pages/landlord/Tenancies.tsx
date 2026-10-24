@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { listMyTenancies, createTenancy, type Tenancy } from "../../features/tenancies/api";
 import { listMyProperties, getMyProperty, type Property, type Unit } from "../../features/properties/api";
 import { parseApiError } from "../../lib/errors";
+import { formatRent } from "../../lib/money";
 
 export default function Tenancies() {
   const [tenancies, setTenancies] = useState<Tenancy[]>([]);
@@ -217,7 +218,7 @@ export default function Tenancies() {
                 {tenancy.tenant?.fullName} - {tenancy.unit?.property.name} ({tenancy.unit?.label})
               </p>
               <p className="text-sm text-ink">
-                NGN {Number(tenancy.rentAmount).toLocaleString()} / {tenancy.rentFrequency.toLowerCase()} - {tenancy.status}
+                {formatRent(tenancy.rentAmount, tenancy.rentFrequency)} - {tenancy.status}
               </p>
               <Link
                 to={`/landlord/tenancies/${tenancy.id}`}

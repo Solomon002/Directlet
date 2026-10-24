@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type UserRole = "LANDLORD" | "TENANT" | "HUNTER";
+export type UserRole = "LANDLORD" | "TENANT" | "HUNTER" | "ADMIN";
 
 export type User = {
   id: string;

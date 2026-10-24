@@ -36,7 +36,7 @@ function ConversationList({
   if (conversations.length === 0) {
     return (
       <p className="p-4 text-sm text-ink">
-        No messages yet. Open a listing and tap <span className="font-bold">Message landlord</span> to start one.
+        No messages yet. Open a listing and tap <span className="font-bold">Message owner</span> to start one.
       </p>
     );
   }

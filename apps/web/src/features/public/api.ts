@@ -21,6 +21,11 @@ export type PublicProperty = {
   description: string | null;
   latitude: number | null;
   longitude: number | null;
+  // Listing-card summary (list endpoint only), from the vacant flats when there
+  // are any, otherwise from all flats.
+  bedroomsMin?: number | null;
+  bedroomsMax?: number | null;
+  priceFrom?: { amount: string; frequency: string } | null;
   unitCount?: number;
   vacantUnitCount?: number;
   units?: PublicUnit[];

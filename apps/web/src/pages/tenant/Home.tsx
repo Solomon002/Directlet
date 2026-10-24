@@ -15,6 +15,7 @@ import { listComplaints, fileComplaint, type Complaint } from "../../features/co
 import { listReminders, describeReminder, type Reminder } from "../../features/dashboard/api";
 import { parseApiError } from "../../lib/errors";
 import StartConversation from "../../features/messages/StartConversation";
+import { formatRent } from "../../lib/money";
 
 export default function TenantHome() {
   const [tenancy, setTenancy] = useState<Tenancy | null>(null);
@@ -207,7 +208,7 @@ export default function TenantHome() {
         {tenancy.unit?.property.name} ({tenancy.unit?.label})
       </h1>
       <p className="mt-1 text-ink">
-        NGN {Number(tenancy.rentAmount).toLocaleString()} / {tenancy.rentFrequency.toLowerCase()}
+        {formatRent(tenancy.rentAmount, tenancy.rentFrequency)}
       </p>
       <p className="mt-1 font-bold text-ink">Outstanding: NGN {outstanding.toLocaleString()}</p>
       {tenancy.unit && (

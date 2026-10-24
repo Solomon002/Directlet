@@ -11,7 +11,7 @@ export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  // Set when a visitor tapped "Message landlord" and was sent here to sign up.
+  // Set when a visitor tapped "Message owner" and was sent here to sign up.
   const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname;
 
   // Most people signing up are looking for a home; landlords pick the other tab.
@@ -79,7 +79,7 @@ export default function Register() {
       </div>
       <p className="mt-2 text-sm text-ink">
         {accountType === "HUNTER"
-          ? "Message landlords directly and keep your chats in one place. No agent fees."
+          ? "Message owners directly and keep your chats in one place. No agent fees."
           : "List your compounds free, manage tenants, rent and complaints."}
       </p>
       <p className="mt-1 text-xs text-ink/60">Renting already? Your landlord sends you an invite link instead.</p>

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { sendMessageSchema, startConversationSchema } from "@directlet/shared";
 import { authenticate } from "../../middleware/authenticate";
+import { requireRole } from "../../middleware/requireRole";
 import { validate } from "../../middleware/validate";
 import { messageRateLimiter } from "../../middleware/rateLimit";
 import { asyncHandler } from "../../utils/asyncHandler";
@@ -8,7 +9,8 @@ import * as conversationController from "./controller";
 
 export const conversationsRouter = Router();
 
-conversationsRouter.use(authenticate);
+// Admins oversee the platform; they do not take part in chats.
+conversationsRouter.use(authenticate, requireRole("LANDLORD", "TENANT", "HUNTER"));
 
 conversationsRouter.get("/", asyncHandler(conversationController.list));
 conversationsRouter.get("/unread-count", asyncHandler(conversationController.unreadCount));
