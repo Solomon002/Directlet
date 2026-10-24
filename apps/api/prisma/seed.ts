@@ -1,11 +1,18 @@
 import "dotenv/config";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { hashPassword } from "../src/lib/password";
 
 const DEMO_LANDLORD_EMAIL = "demo@directlet.ng";
-const DEMO_LANDLORD_PASSWORD = "DemoPass123!";
+// Never written in the repo. Set DEMO_PASSWORD, or one is made for this run.
+// It only applies if the account does not exist yet; an existing account keeps its password.
+const passwordFromEnv = process.env.DEMO_PASSWORD;
+const DEMO_LANDLORD_PASSWORD = passwordFromEnv ?? randomBytes(15).toString("base64url");
 
 async function main() {
+  if (!passwordFromEnv) {
+    console.log(`No DEMO_PASSWORD set. If the demo landlord is created now, its password is: ${DEMO_LANDLORD_PASSWORD}`);
+  }
   const passwordHash = await hashPassword(DEMO_LANDLORD_PASSWORD);
 
   const landlord = await prisma.user.upsert({

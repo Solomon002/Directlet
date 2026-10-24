@@ -1,7 +1,8 @@
 ﻿# Adjust this if your api dev server runs on a different port.
 $apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
+if (-not $env:DEMO_PASSWORD) { throw "Set DEMO_PASSWORD to the demo landlord's password first (not stored in the repo)." }
 
-$landlordLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = "demo@directlet.ng"; password = "DemoPass123!" } | ConvertTo-Json) -SessionVariable landlordSession
+$landlordLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = "demo@directlet.ng"; password = $env:DEMO_PASSWORD } | ConvertTo-Json) -SessionVariable landlordSession
 $landlordHeaders = @{ Authorization = "Bearer $($landlordLogin.accessToken)" }
 Write-Host "=== Landlord logged in ==="
 

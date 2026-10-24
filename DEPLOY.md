@@ -66,6 +66,19 @@ Admin is never offered at sign-up. Sign up as a house hunter, then from a laptop
 pnpm --filter @directlet/api admin:grant someone@example.com
 ```
 
+## Running the test scripts
+
+The scripts in `scripts/` call a running API. No password is stored in the repo:
+
+```powershell
+$env:DEMO_PASSWORD = "the demo landlord's password"   # the demo account
+$env:API_BASE = "http://localhost:4000"               # optional, this is the default
+.\scripts\test-v1-gaps.ps1
+```
+
+Test accounts get a random password on every run. `seed.ts` reads `DEMO_PASSWORD`
+the same way, or makes a random one and prints it.
+
 ## Known limits
 
 - Rate limits are counted in memory, per running function. They slow down

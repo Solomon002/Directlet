@@ -1,7 +1,10 @@
 ﻿# Adjust this if your api dev server runs on a different port.
 $apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
+if (-not $env:DEMO_PASSWORD) { throw "Set DEMO_PASSWORD to the demo landlord's password first (not stored in the repo)." }
+# A fresh random password for every test account, so none is ever written in the repo.
+$testPassword = "Tp-" + [guid]::NewGuid().ToString("N")
 
-$landlordLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = "demo@directlet.ng"; password = "DemoPass123!" } | ConvertTo-Json) -SessionVariable landlordSession
+$landlordLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = "demo@directlet.ng"; password = $env:DEMO_PASSWORD } | ConvertTo-Json) -SessionVariable landlordSession
 $landlordHeaders = @{ Authorization = "Bearer $($landlordLogin.accessToken)" }
 Write-Host "=== Landlord logged in ==="
 
@@ -31,7 +34,7 @@ if (-not $tenancyId) {
 Write-Host "=== Test tenancy created: $tenancyId ==="
 
 $inviteToken = $tenancyResult.inviteLink.Split("/")[-1]
-$acceptResult = Invoke-RestMethod -Uri "$apiBase/auth/invite/$inviteToken/accept" -Method Post -ContentType "application/json" -Body (@{ password = "ComplaintTestPass123!" } | ConvertTo-Json) -SessionVariable tenantSession
+$acceptResult = Invoke-RestMethod -Uri "$apiBase/auth/invite/$inviteToken/accept" -Method Post -ContentType "application/json" -Body (@{ password = $testPassword } | ConvertTo-Json) -SessionVariable tenantSession
 $tenantHeaders = @{ Authorization = "Bearer $($acceptResult.accessToken)" }
 Write-Host "=== Tenant invite accepted, logged in ==="
 

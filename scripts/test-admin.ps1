@@ -1,6 +1,9 @@
 ﻿# Tests the admin panel API: granting admin, overview numbers, visit counting,
 # user search, suspension, and taking listings down. Creates its own accounts.
 $apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
+if (-not $env:DEMO_PASSWORD) { throw "Set DEMO_PASSWORD to the demo landlord's password first (not stored in the repo)." }
+# A fresh random password for every test account, so none is ever written in the repo.
+$testPassword = "Tp-" + [guid]::NewGuid().ToString("N")
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $json = "application/json"
 
@@ -20,11 +23,11 @@ function Check($label, $condition, $detail) {
 }
 
 function Register($name, $email, $type) {
-  return Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType $json -Body (@{ fullName = $name; email = $email; password = "AdminTestPass123!"; accountType = $type } | ConvertTo-Json)
+  return Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType $json -Body (@{ fullName = $name; email = $email; password = $testPassword; accountType = $type } | ConvertTo-Json)
 }
 
 function Login($email) {
-  return Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = $email; password = "AdminTestPass123!" } | ConvertTo-Json)
+  return Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = $email; password = $testPassword } | ConvertTo-Json)
 }
 
 $suffix = Get-Random
@@ -37,7 +40,7 @@ Check "admin:grant makes the account an admin" ($grant -match "is now an admin")
 $admin = Login $adminEmail
 Check "Admin logs in with the ADMIN role" ($admin.user.role -eq "ADMIN") "(got $($admin.user.role))"
 $ah = @{ Authorization = "Bearer $($admin.accessToken)" }
-Write-Host "      Admin login: $adminEmail / AdminTestPass123!"
+Write-Host "      Admin login: $adminEmail / $testPassword"
 
 $refused = pnpm --silent --dir "$repoRoot" --filter @directlet/api admin:grant "demo@directlet.ng" 2>&1 | Out-String
 Check "admin:grant refuses to turn a landlord into an admin" ($refused -match "landlord account") "($refused)"
@@ -45,7 +48,7 @@ Check "admin:grant refuses to turn a landlord into an admin" ($refused -match "l
 Expect-Status "Sign-up cannot create an admin" 400 { Register "Sneaky" "sneaky.$suffix@example.com" "ADMIN" }
 
 # --- Who can open the panel ---
-$demo = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = "demo@directlet.ng"; password = "DemoPass123!" } | ConvertTo-Json)
+$demo = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = "demo@directlet.ng"; password = $env:DEMO_PASSWORD } | ConvertTo-Json)
 $dh = @{ Authorization = "Bearer $($demo.accessToken)" }
 Expect-Status "A landlord cannot open the admin panel" 403 { Invoke-RestMethod -Uri "$apiBase/admin/overview" -Headers $dh }
 Expect-Status "Signed-out visitors cannot open it" 401 { Invoke-RestMethod -Uri "$apiBase/admin/overview" }
@@ -115,6 +118,11 @@ Check "Restoring puts it back on the marketplace" ($restored.property.id -eq $pr
 $log = (Invoke-RestMethod -Uri "$apiBase/admin/activity?userId=$($admin.user.id)" -Headers $ah).entries
 Check "Admin actions are in the activity log" (@($log | Where-Object { $_.path -like "/admin/*" }).Count -ge 4) "(got $(@($log | Where-Object { $_.path -like '/admin/*' }).Count))"
 
-# Clean up: keep the test property off the marketplace.
+# Clean up: take admin rights back from the test account (it becomes a plain house hunter
+# with a random password nobody knows), so a test run never leaves an admin behind.
+$revoke = pnpm --silent --dir "$repoRoot" --filter @directlet/api admin:grant $adminEmail --revoke 2>&1 | Out-String
+Check "The test admin is revoked at the end" ($revoke -match "no longer an admin") "($revoke)"
+
+# Keep the test property off the marketplace.
 Invoke-RestMethod -Uri "$apiBase/properties/$($property.id)" -Method Patch -ContentType $json -Headers $lh -Body (@{ isPublic = $false } | ConvertTo-Json) | Out-Null
 Write-Host "=== Done. Test property hidden from the marketplace. ==="

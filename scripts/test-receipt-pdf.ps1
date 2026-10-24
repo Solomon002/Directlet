@@ -1,7 +1,8 @@
 ﻿# Adjust this if your api dev server runs on a different port.
 $apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
+if (-not $env:DEMO_PASSWORD) { throw "Set DEMO_PASSWORD to the demo landlord's password first (not stored in the repo)." }
 
-$landlordLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = "demo@directlet.ng"; password = "DemoPass123!" } | ConvertTo-Json)
+$landlordLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = "demo@directlet.ng"; password = $env:DEMO_PASSWORD } | ConvertTo-Json)
 $landlordHeaders = @{ Authorization = "Bearer $($landlordLogin.accessToken)" }
 
 Invoke-WebRequest -Uri "$apiBase/payments/2255bebb-758c-45dc-8bb1-18c5843f47c9/receipt" -Headers $landlordHeaders -OutFile "C:\Users\atans\Desktop\DirectLet\scripts\receipt-1.pdf"

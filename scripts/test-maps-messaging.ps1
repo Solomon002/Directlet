@@ -1,6 +1,9 @@
 ﻿# Tests map locations, house hunter accounts, and in-app messaging. Creates a
 # test property with a pin, a hunter and a tenant, and hides the property at the end.
 $apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
+if (-not $env:DEMO_PASSWORD) { throw "Set DEMO_PASSWORD to the demo landlord's password first (not stored in the repo)." }
+# A fresh random password for every test account, so none is ever written in the repo.
+$testPassword = "Tp-" + [guid]::NewGuid().ToString("N")
 $json = "application/json"
 
 function Expect-Status($label, $expected, [scriptblock]$call) {
@@ -22,7 +25,7 @@ function Check($label, $condition, $detail) {
 }
 
 $suffix = Get-Random
-$landlord = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = "demo@directlet.ng"; password = "DemoPass123!" } | ConvertTo-Json)
+$landlord = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = "demo@directlet.ng"; password = $env:DEMO_PASSWORD } | ConvertTo-Json)
 $lh = @{ Authorization = "Bearer $($landlord.accessToken)" }
 
 # --- Map location ---
@@ -49,12 +52,12 @@ Expect-Status "Address search needs 3+ characters" 400 { Invoke-RestMethod -Uri 
 
 # --- House hunter account ---
 $hunterEmail = "hunter.$suffix@example.com"
-$hunter = Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType $json -Body (@{ fullName = "Ada Hunter"; email = $hunterEmail; password = "HunterPass123!"; accountType = "HUNTER" } | ConvertTo-Json)
+$hunter = Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType $json -Body (@{ fullName = "Ada Hunter"; email = $hunterEmail; password = $testPassword; accountType = "HUNTER" } | ConvertTo-Json)
 $hh = @{ Authorization = "Bearer $($hunter.accessToken)" }
 Check "House hunter signs up with the HUNTER role" ($hunter.user.role -eq "HUNTER") "(got $($hunter.user.role))"
-Write-Host "      Hunter login: $hunterEmail / HunterPass123!"
+Write-Host "      Hunter login: $hunterEmail / $testPassword"
 
-Expect-Status "Signing up as TENANT directly is refused" 400 { Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType $json -Body (@{ fullName = "Sneaky"; email = "sneaky.$suffix@example.com"; password = "SneakyPass123!"; accountType = "TENANT" } | ConvertTo-Json) }
+Expect-Status "Signing up as TENANT directly is refused" 400 { Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType $json -Body (@{ fullName = "Sneaky"; email = "sneaky.$suffix@example.com"; password = $testPassword; accountType = "TENANT" } | ConvertTo-Json) }
 Expect-Status "Hunter cannot open the landlord dashboard" 403 { Invoke-RestMethod -Uri "$apiBase/dashboard" -Headers $hh }
 Expect-Status "Hunter cannot list payments" 403 { Invoke-RestMethod -Uri "$apiBase/payments" -Headers $hh }
 Expect-Status "Hunter cannot list properties as a landlord" 403 { Invoke-RestMethod -Uri "$apiBase/properties" -Headers $hh }
@@ -87,7 +90,7 @@ Expect-Status "Empty message is rejected" 400 { Invoke-RestMethod -Uri "$apiBase
 Expect-Status "Message over 2000 characters is rejected" 400 { Invoke-RestMethod -Uri "$apiBase/conversations/$($conv.id)/messages" -Method Post -ContentType $json -Headers $hh -Body (@{ body = ("x" * 2001) } | ConvertTo-Json) }
 
 # --- Strangers cannot read or post ---
-$stranger = Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType $json -Body (@{ fullName = "Stranger"; email = "stranger.$suffix@example.com"; password = "StrangerPass123!"; accountType = "HUNTER" } | ConvertTo-Json)
+$stranger = Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType $json -Body (@{ fullName = "Stranger"; email = "stranger.$suffix@example.com"; password = $testPassword; accountType = "HUNTER" } | ConvertTo-Json)
 $sh = @{ Authorization = "Bearer $($stranger.accessToken)" }
 Expect-Status "Another hunter cannot read the chat" 404 { Invoke-RestMethod -Uri "$apiBase/conversations/$($conv.id)/messages" -Headers $sh }
 Expect-Status "Another hunter cannot post into the chat" 404 { Invoke-RestMethod -Uri "$apiBase/conversations/$($conv.id)/messages" -Method Post -ContentType $json -Headers $sh -Body (@{ body = "hi" } | ConvertTo-Json) }
@@ -99,7 +102,7 @@ Expect-Status "Hunter cannot start a chat about a hidden property" 404 { Invoke-
 # --- Hunter becomes a tenant and keeps their chat ---
 $tenancy = Invoke-RestMethod -Uri "$apiBase/tenancies" -Method Post -ContentType $json -Headers $lh -Body (@{ unitId = $unit.id; tenantEmail = $hunterEmail; tenantFullName = "Ada Hunter"; startDate = (Get-Date -Format "yyyy-MM-dd") } | ConvertTo-Json)
 Check "Renting to a hunter needs no invite (they already have a login)" ($null -eq $tenancy.inviteLink) "(inviteLink $($tenancy.inviteLink))"
-$relogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = $hunterEmail; password = "HunterPass123!" } | ConvertTo-Json)
+$relogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = $hunterEmail; password = $testPassword } | ConvertTo-Json)
 Check "The hunter is now a tenant" ($relogin.user.role -eq "TENANT") "(got $($relogin.user.role))"
 $th = @{ Authorization = "Bearer $($relogin.accessToken)" }
 $tenantChats = (Invoke-RestMethod -Uri "$apiBase/conversations" -Headers $th).conversations

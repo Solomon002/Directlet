@@ -2,6 +2,9 @@
 # editing/deleting properties and flats. Creates its own test property and
 # hides it from the marketplace at the end.
 $apiBase = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:4000" }
+if (-not $env:DEMO_PASSWORD) { throw "Set DEMO_PASSWORD to the demo landlord's password first (not stored in the repo)." }
+# A fresh random password for every test account, so none is ever written in the repo.
+$testPassword = "Tp-" + [guid]::NewGuid().ToString("N")
 
 function Get-StatusCode($err) {
   return [int]$err.Exception.Response.StatusCode
@@ -30,7 +33,7 @@ function Check($label, $condition, $detail) {
 }
 
 $json = "application/json"
-$landlordLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = "demo@directlet.ng"; password = "DemoPass123!" } | ConvertTo-Json) -SessionVariable landlordSession
+$landlordLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = "demo@directlet.ng"; password = $env:DEMO_PASSWORD } | ConvertTo-Json) -SessionVariable landlordSession
 $lh = @{ Authorization = "Bearer $($landlordLogin.accessToken)" }
 $suffix = Get-Random
 
@@ -53,9 +56,9 @@ Invoke-RestMethod -Uri "$apiBase/properties/$($property.id)" -Method Patch -Cont
 $tenancyResult = Invoke-RestMethod -Uri "$apiBase/tenancies" -Method Post -ContentType $json -Headers $lh -Body (@{ unitId = $unitA.id; tenantEmail = "v1gap.$suffix@example.com"; tenantFullName = "V1 Gap Tenant"; startDate = (Get-Date -Format "yyyy-MM-dd") } | ConvertTo-Json)
 $tenancyId = $tenancyResult.tenancy.id
 $inviteToken = $tenancyResult.inviteLink.Split("/")[-1]
-$tenantLogin = Invoke-RestMethod -Uri "$apiBase/auth/invite/$inviteToken/accept" -Method Post -ContentType $json -Body (@{ password = "V1GapPass123!" } | ConvertTo-Json)
+$tenantLogin = Invoke-RestMethod -Uri "$apiBase/auth/invite/$inviteToken/accept" -Method Post -ContentType $json -Body (@{ password = $testPassword } | ConvertTo-Json)
 $th = @{ Authorization = "Bearer $($tenantLogin.accessToken)" }
-Write-Host "=== Tenant V1 Gap Tenant (v1gap.$suffix@example.com / V1GapPass123!) moved into Flat A ==="
+Write-Host "=== Tenant V1 Gap Tenant (v1gap.$suffix@example.com / $testPassword) moved into Flat A ==="
 
 # --- Vacancy on the public site ---
 $public = (Invoke-RestMethod -Uri "$apiBase/public/properties/$($property.id)").property

@@ -6,3 +6,4 @@ dist
 apps/api/src/generated
 .vercel
 .env.vercel
+.demo-login.txt
