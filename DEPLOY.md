@@ -75,9 +75,17 @@ pnpm --filter @directlet/api admin:grant someone@example.com
 
 ## Installing it on a phone (PWA)
 
-The website is installable. On Android Chrome a small banner offers **Install**;
-on iPhone, Safari > Share > **Add to Home Screen**. The installed app opens full
-screen, and someone already signed in lands on their own dashboard.
+The website is installable. On phones a slim bar is fixed to the bottom of the
+home and browse pages until the app is installed: it has an **Install** button on
+Android Chrome, and a "Share > Add to Home Screen" hint on iPhone Safari. The
+x only hides it for the current visit. On larger screens there is an "Install app"
+link in the header. The installed app opens full screen, and someone already
+signed in lands on their own dashboard.
+
+Vercel setting that matters: **Settings > Build and Deployment > Root Directory >
+Skip deployment** must be **Disabled**. The project's Root Directory is `deploy`,
+so with it on, a push that only changes `apps/` is treated as "nothing changed"
+and is not built.
 
 - `apps/web/public/manifest.webmanifest` sets the name, colours, icons and shortcuts.
 - `apps/web/public/sw.js` is the service worker. It never touches `/api` and only

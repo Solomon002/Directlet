@@ -4,11 +4,13 @@ import { homePathFor } from "../../lib/roles";
 import { logout } from "../../lib/session";
 import { useUnreadCount } from "../../features/messages/api";
 import UnreadBadge from "../../features/messages/UnreadBadge";
+import { promptInstall, useInstall } from "../../features/pwa/installState";
 
 export default function PublicLayout() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const unread = useUnreadCount();
+  const { canPrompt } = useInstall();
 
   async function handleLogout() {
     await logout();
@@ -23,6 +25,11 @@ export default function PublicLayout() {
         </Link>
         <nav className="flex flex-wrap justify-end gap-x-5 gap-y-1 text-sm font-bold text-ink">
           <Link to="/compounds">Browse</Link>
+          {canPrompt && (
+            <button type="button" onClick={() => void promptInstall()} className="hidden font-bold text-trust-blue md:inline">
+              Install app
+            </button>
+          )}
           {!user && (
             <>
               <Link to="/login">Log in</Link>
