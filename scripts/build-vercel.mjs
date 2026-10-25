@@ -117,6 +117,18 @@ writeFileSync(
       version: 3,
       routes: [
         { src: "/(.*)", headers: securityHeaders, continue: true },
+        // The installable-app files. The service worker is never cached, so a new
+        // version reaches phones as soon as it is deployed.
+        {
+          src: "/manifest.webmanifest",
+          headers: { "content-type": "application/manifest+json" },
+          continue: true,
+        },
+        {
+          src: "/sw.js",
+          headers: { "cache-control": "public, max-age=0, must-revalidate", "content-type": "text/javascript; charset=utf-8" },
+          continue: true,
+        },
         {
           src: "/assets/(.*)",
           headers: { "cache-control": "public, max-age=31536000, immutable" },

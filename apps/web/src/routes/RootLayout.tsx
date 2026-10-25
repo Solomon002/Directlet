@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router";
 import { API_URL } from "../lib/authApi";
+import InstallBanner from "../features/pwa/InstallBanner";
 
 // Counts one page view per page opened. No cookies are set and nothing
 // identifies the visitor; the API only keeps a daily-changing hash.
@@ -21,5 +22,10 @@ function usePageViews() {
 
 export default function RootLayout() {
   usePageViews();
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <InstallBanner />
+    </>
+  );
 }

@@ -76,7 +76,8 @@ export default function Browse() {
     void (async () => {
       try {
         const data = await listPublicProperties({ city: city || undefined, area: area || undefined });
-        setProperties(data.properties);
+        // An unexpected reply (not a list) shows as "no listings" instead of crashing.
+        setProperties(Array.isArray(data.properties) ? data.properties : []);
       } catch (err) {
         setLoadError(parseApiError(err).message);
       } finally {

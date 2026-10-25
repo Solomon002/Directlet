@@ -73,6 +73,23 @@ Admin is never offered at sign-up. Sign up as a house hunter, then from a laptop
 pnpm --filter @directlet/api admin:grant someone@example.com
 ```
 
+## Installing it on a phone (PWA)
+
+The website is installable. On Android Chrome a small banner offers **Install**;
+on iPhone, Safari > Share > **Add to Home Screen**. The installed app opens full
+screen, and someone already signed in lands on their own dashboard.
+
+- `apps/web/public/manifest.webmanifest` sets the name, colours, icons and shortcuts.
+- `apps/web/public/sw.js` is the service worker. It never touches `/api` and only
+  saves built files in `/assets`. Offline, it shows `offline.html`. Bump `VERSION`
+  in it only if it changes how files are saved.
+- The icons are **placeholders** drawn by `scripts/make-icons.mjs`. When the real
+  logo arrives, replace `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`
+  (keep the logo inside the middle 80% so Android can crop it), `apple-touch-icon.png`
+  (180 px) and `icon.svg` in `apps/web/public`, then delete the script.
+- Service workers only run on the real site (https) and on localhost builds
+  (`pnpm --filter @directlet/web build`, then `preview`), not in `pnpm dev`.
+
 ## Running the test scripts
 
 The scripts in `scripts/` call a running API. No password is stored in the repo:

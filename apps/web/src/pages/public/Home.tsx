@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { listPublicProperties, type PublicProperty } from "../../features/public/api";
 import {
   CompoundThumb,
@@ -557,11 +557,22 @@ function Footer() {
 
 export default function Home() {
   const [properties, setProperties] = useState<PublicProperty[]>([]);
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const user = useAuthStore((s) => s.user);
+
+  // The installed app opens at "/?source=pwa". Someone already signed in goes
+  // straight to their own space instead of the marketing page.
+  const openedFromInstalledApp = params.get("source") === "pwa";
+  useEffect(() => {
+    if (openedFromInstalledApp && user) navigate(homePathFor(user.role), { replace: true });
+  }, [openedFromInstalledApp, user, navigate]);
 
   useEffect(() => {
     // The landing page works without this; it only adds live listings and areas.
     listPublicProperties()
-      .then((data) => setProperties(data.properties))
+      // If the reply is not the expected list, show the page without listings.
+      .then((data) => setProperties(Array.isArray(data.properties) ? data.properties : []))
       .catch(() => undefined);
   }, []);
 
