@@ -238,7 +238,7 @@ export default function TenantHome() {
         </div>
       ))}
 
-      <div className="mt-8 max-w-md rounded-xl bg-white p-6 shadow-sm">
+      <div id="pay" className="mt-8 max-w-md scroll-mt-20 rounded-xl bg-white p-6 shadow-sm">
         <h2 className="font-display text-lg font-extrabold text-night-blue">Record a payment</h2>
         <form onSubmit={handleRecordPayment} className="mt-4 flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm font-bold text-ink">
@@ -311,7 +311,7 @@ export default function TenantHome() {
         </form>
       </div>
 
-      <div className="mt-8">
+      <div id="history" className="mt-8 scroll-mt-20">
         <h2 className="font-display text-lg font-extrabold text-night-blue">Payment history</h2>
         {payments.length === 0 && <p className="mt-2 text-ink">No payments recorded yet.</p>}
         {historyError && <p className="mt-2 text-sm font-bold text-red-600">{historyError}</p>}
@@ -384,7 +384,7 @@ export default function TenantHome() {
         </ul>
       </div>
 
-      <div className="mt-8 max-w-md rounded-xl bg-white p-6 shadow-sm">
+      <div id="complaints" className="mt-8 max-w-md scroll-mt-20 rounded-xl bg-white p-6 shadow-sm">
         <h2 className="font-display text-lg font-extrabold text-night-blue">File a complaint</h2>
         <form onSubmit={handleFileComplaint} className="mt-4 flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm font-bold text-ink">

@@ -76,6 +76,44 @@
 
 html { scroll-behavior: smooth; }
 
+/* Bigger touch targets on phones. Many links and buttons are small text (about
+   20px tall), which is hard to hit with a thumb. This grows the area that
+   responds to a tap by about 10px above and below each one without changing how
+   anything looks or where it sits. Tailwind's own position classes override the
+   "relative" here, because this rule is intentionally low in specificity. */
+@media (pointer: coarse), (max-width: 767px) {
+  main :is(a, button, summary):where(:not([disabled])) {
+    position: relative;
+  }
+  main :is(a, button, summary):where(:not([disabled]))::after {
+    content: "";
+    position: absolute;
+    inset: -10px -6px;
+  }
+}
+
+/* Form fields on phones. iPhones zoom the whole page in when you tap a field whose
+   text is under 16px, and then leave it zoomed. 16px stops that, and a 44px height
+   makes each field easy to hit. "important" is deliberate: it has to win over the
+   smaller text sizes set on individual fields. */
+@media (pointer: coarse), (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+  select {
+    min-height: 44px;
+  }
+}
+
+/* Keeps content clear of a phone's side notch when it is held sideways. */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
 body {
   margin: 0;
   background: #ffffff;

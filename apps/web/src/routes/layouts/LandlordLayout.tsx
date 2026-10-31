@@ -1,47 +1,16 @@
-import { Link, Outlet, useNavigate } from "react-router";
-import { logout } from "../../lib/session";
 import { useUnreadCount } from "../../features/messages/api";
-import UnreadBadge from "../../features/messages/UnreadBadge";
+import PortalShell, { type NavItem } from "../../features/nav/PortalShell";
 
 export default function LandlordLayout() {
-  const navigate = useNavigate();
   const unread = useUnreadCount();
 
-  async function handleLogout() {
-    await logout();
-    navigate("/", { replace: true });
-  }
+  const items: NavItem[] = [
+    { to: "/landlord", label: "Dashboard", icon: "home", end: true },
+    { to: "/landlord/properties", label: "Properties", icon: "building" },
+    { to: "/landlord/tenancies", label: "Tenancies", icon: "clipboard" },
+    { to: "/landlord/inspections", label: "Inspections", icon: "calendar" },
+    { to: "/landlord/messages", label: "Messages", icon: "chat", badge: unread },
+  ];
 
-  return (
-    <div className="min-h-screen bg-mist md:flex">
-      {/* A compact top bar on phones, a sidebar from md up. */}
-      <aside className="flex items-start justify-between gap-4 bg-night-blue px-4 py-3 text-white md:w-56 md:flex-col md:px-6 md:py-8">
-        <div>
-          <Link to="/landlord" className="font-display text-lg font-extrabold">
-            DirectLet
-          </Link>
-          <nav className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold md:mt-8 md:flex-col md:gap-3">
-            <Link to="/landlord">Dashboard</Link>
-            <Link to="/landlord/properties">Properties</Link>
-            <Link to="/landlord/tenancies">Tenancies</Link>
-            <Link to="/landlord/inspections">Inspections</Link>
-            <Link to="/landlord/messages">
-              Messages
-              <UnreadBadge count={unread} />
-            </Link>
-          </nav>
-        </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="shrink-0 whitespace-nowrap text-left text-sm font-bold text-white/70 hover:text-white"
-        >
-          Log out
-        </button>
-      </aside>
-      <main className="flex-1">
-        <Outlet />
-      </main>
-    </div>
-  );
+  return <PortalShell tone="landlord" homePath="/landlord" roleLabel="Landlord" items={items} />;
 }

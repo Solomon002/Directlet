@@ -240,8 +240,15 @@ export default function Inbox({ basePath }: { basePath: string }) {
 
   return (
     <div className="p-4 sm:p-8">
-      <h1 className="font-display text-2xl font-extrabold text-night-blue">Messages</h1>
-      <div className="mt-4 flex h-[70vh] min-h-[24rem] overflow-hidden rounded-xl bg-white shadow-sm">
+      {/* On a phone, an open conversation gets the whole screen between the bars. */}
+      <h1 className={`font-display text-2xl font-extrabold text-night-blue ${conversationId ? "hidden md:block" : ""}`}>
+        Messages
+      </h1>
+      <div
+        className={`mt-4 flex min-h-[22rem] overflow-hidden rounded-xl bg-white shadow-sm md:h-[70vh] md:min-h-[24rem] ${
+          conversationId ? "h-[calc(100dvh-9.5rem)]" : "h-[calc(100dvh-12.5rem)]"
+        }`}
+      >
         <div
           className={`w-full overflow-y-auto border-mist md:block md:w-80 md:shrink-0 md:border-r ${
             conversationId ? "hidden" : "block"
