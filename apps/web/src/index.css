@@ -108,6 +108,12 @@ html { scroll-behavior: smooth; }
   }
 }
 
+/* A map's own layers use high stacking numbers (400 to 1000), which would draw it
+   over the sticky header while scrolling. This keeps the whole map underneath. */
+.leaflet-container {
+  z-index: 0;
+}
+
 /* Keeps content clear of a phone's side notch when it is held sideways. */
 body {
   padding-left: env(safe-area-inset-left, 0px);

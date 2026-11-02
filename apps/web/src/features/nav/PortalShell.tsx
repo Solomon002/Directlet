@@ -1,11 +1,16 @@
-import { useEffect } from "react";
+import { useId, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { logout } from "../../lib/session";
+import { useAuthStore } from "../../stores/authStore";
 import UnreadBadge from "../messages/UnreadBadge";
+import { promptInstall, useInstall } from "../pwa/installState";
+import Brand from "./Brand";
+import Drawer, { HamburgerButton } from "./Drawer";
 import { NavIcon, type IconName } from "./icons";
+import { useScrollOnNavigate } from "./useScrollOnNavigate";
 
 // The frame around the landlord, tenant and admin areas:
-//   phones     a slim top bar, plus a tab bar fixed to the bottom of the screen
+//   phones     a slim top bar with a hamburger menu, plus a tab bar fixed to the bottom
 //   md and up  a sidebar that stays in view while the page scrolls
 export type NavItem = {
   to: string;
@@ -35,28 +40,6 @@ function isActive(item: NavItem, items: NavItem[], pathname: string, hash: strin
   return path === item.to || path.startsWith(`${item.to}/`);
 }
 
-// Moving between tabs starts at the top of the new page, and jump links scroll to
-// their section. The section may not exist yet if its data is still loading, so
-// it keeps looking for a couple of seconds.
-function useScrollOnNavigate() {
-  const { pathname, hash } = useLocation();
-  useEffect(() => {
-    if (!hash) {
-      window.scrollTo({ top: 0, behavior: "instant" });
-      return;
-    }
-    let tries = 0;
-    const timer = window.setInterval(() => {
-      const target = document.getElementById(hash.slice(1));
-      if (target || ++tries > 20) {
-        window.clearInterval(timer);
-        target?.scrollIntoView({ block: "start" });
-      }
-    }, 100);
-    return () => window.clearInterval(timer);
-  }, [pathname, hash]);
-}
-
 // Tapping the tab you are already on does not change the address, so nothing else
 // would happen. Like most apps, it scrolls back to that section, or to the top.
 function scrollToItem(item: NavItem) {
@@ -79,25 +62,37 @@ export default function PortalShell({
   extraLink?: { to: string; label: string };
 }) {
   const navigate = useNavigate();
-  const { pathname, hash } = useLocation();
+  const location = useLocation();
+  const { pathname, hash } = location;
+  const user = useAuthStore((s) => s.user);
+  const { canPrompt } = useInstall();
+  const menuId = useId();
+  const menuButton = useRef<HTMLButtonElement>(null);
   useScrollOnNavigate();
 
+  // The menu is open only for the page it was opened on, so any navigation closes it.
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const menuOpen = openKey === location.key;
+  const closeMenu = () => setOpenKey(null);
+
   async function handleLogout() {
+    closeMenu();
     await logout();
     navigate("/", { replace: true });
   }
 
   const bg = TONE_BG[tone];
+  const totalBadge = items.reduce((sum, item) => sum + (item.badge ?? 0), 0);
 
   return (
     <div className="min-h-screen bg-mist md:flex">
       {/* Sidebar: larger screens */}
       <aside className={`hidden ${bg} text-white md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:flex-col md:justify-between md:px-3 md:py-8`}>
         <div>
-          <Link to={homePath} className="block px-3 font-display text-lg font-extrabold">
-            DirectLet
-          </Link>
-          <p className="px-3 text-xs font-bold uppercase tracking-wide text-white/60">{roleLabel}</p>
+          <div className="px-3">
+            <Brand to={homePath} tone="light" />
+          </div>
+          <p className="mt-1 px-3 text-xs font-bold uppercase tracking-wide text-white/60">{roleLabel}</p>
           <nav aria-label="Main" className="mt-6 flex flex-col gap-1">
             {items.map((item) => {
               const active = isActive(item, items, pathname, hash);
@@ -139,34 +134,101 @@ export default function PortalShell({
 
       {/* Top bar: phones */}
       <header
-        className={`sticky top-0 z-30 flex items-center justify-between gap-2 px-4 text-white md:hidden ${bg}`}
+        className={`sticky top-0 z-30 flex items-center justify-between gap-2 px-4 text-white shadow-sm md:hidden ${bg}`}
         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
         <div className="flex min-h-14 items-center gap-2 overflow-hidden">
-          <Link to={homePath} className="font-display text-lg font-extrabold">
-            DirectLet
-          </Link>
+          <Brand to={homePath} tone="light" />
           <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">{roleLabel}</span>
         </div>
-        <div className="flex shrink-0 items-center">
-          {extraLink && (
-            <Link to={extraLink.to} className="flex min-h-11 items-center px-2 text-sm font-bold text-white/80">
-              {extraLink.label}
-            </Link>
+        <div className="relative shrink-0">
+          <HamburgerButton
+            onClick={() => setOpenKey(location.key)}
+            open={menuOpen}
+            controls={menuId}
+            buttonRef={menuButton}
+            className="text-white hover:bg-white/10"
+          />
+          {totalBadge > 0 && (
+            <span className="pointer-events-none absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-direct-green ring-2 ring-white/20" aria-hidden="true" />
           )}
-          <button
-            type="button"
-            onClick={() => void handleLogout()}
-            className="flex min-h-11 items-center px-2 text-sm font-bold text-white/80"
-          >
-            Log out
-          </button>
         </div>
       </header>
 
       <main className="min-w-0 flex-1 pb-24 md:pb-0">
         <Outlet />
       </main>
+
+      {/* Menu opened from the hamburger: phones */}
+      <Drawer open={menuOpen} onClose={closeMenu} label="Menu" returnFocusRef={menuButton} closeTone="light">
+        <div id={menuId} className="flex min-h-0 flex-1 flex-col">
+          <div className={`${bg} px-5 pb-5 pt-6 text-white`}>
+            <div className="flex items-center gap-3 pr-10">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/20 font-display text-xl font-extrabold">
+                {(user?.fullName ?? "?").trim().charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate font-display font-extrabold">{user?.fullName}</p>
+                <p className="truncate text-xs text-white/75">{user?.email}</p>
+              </div>
+            </div>
+            <span className="mt-3 inline-block rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+              {roleLabel}
+            </span>
+          </div>
+
+          <nav aria-label="Menu" className="flex-1 overflow-y-auto p-3">
+            {items.map((item) => {
+              const active = isActive(item, items, pathname, hash);
+              return (
+                <Link
+                  key={`${item.to}${item.hash ?? ""}`}
+                  to={{ pathname: item.to, hash: item.hash }}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => {
+                    closeMenu();
+                    if (active) scrollToItem(item);
+                  }}
+                  className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-base font-bold ${
+                    active ? "bg-mist text-trust-blue" : "text-night-blue hover:bg-mist"
+                  }`}
+                >
+                  <NavIcon name={item.icon} className="h-5 w-5" />
+                  {item.label}
+                  <UnreadBadge count={item.badge ?? 0} />
+                </Link>
+              );
+            })}
+            {extraLink && (
+              <Link to={extraLink.to} onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-3 text-base font-bold text-night-blue hover:bg-mist">
+                {extraLink.label}
+              </Link>
+            )}
+            {canPrompt && (
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  void promptInstall();
+                }}
+                className="flex min-h-12 w-full items-center rounded-xl px-3 text-left text-base font-bold text-trust-blue hover:bg-mist"
+              >
+                Install the app
+              </button>
+            )}
+          </nav>
+
+          <div className="border-t border-mist p-4">
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="w-full rounded-xl border-2 border-red-600 px-5 py-3 font-display font-extrabold text-red-600"
+            >
+              Log out
+            </button>
+          </div>
+        </div>
+      </Drawer>
 
       {/* Tab bar: phones */}
       <nav

@@ -174,7 +174,7 @@ function HowItWorks() {
     },
   ];
   return (
-    <section className="bg-white py-14 sm:py-20">
+    <section id="how" className="scroll-mt-16 bg-white py-14 sm:py-20">
       <div className={page}>
         <Reveal>
           <p className="text-sm font-bold uppercase tracking-wide text-trust-blue">For house hunters</p>
@@ -294,7 +294,7 @@ function ForLandlords() {
     "Viewing requests, complaints and messages in one place",
   ];
   return (
-    <section className="bg-mist py-14 sm:py-20">
+    <section id="landlords" className="scroll-mt-16 bg-mist py-14 sm:py-20">
       <div className={`${page} grid items-center gap-10 lg:grid-cols-2`}>
         <Reveal>
           <DashboardMock />
@@ -485,7 +485,7 @@ const FAQ = [
 
 function Faq() {
   return (
-    <section className="bg-mist py-14 sm:py-20">
+    <section id="faq" className="scroll-mt-16 bg-mist py-14 sm:py-20">
       <div className={`${page} max-w-3xl`}>
         <Reveal>
           <h2 className={sectionTitle}>Questions people ask</h2>
