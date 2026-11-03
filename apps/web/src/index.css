@@ -118,6 +118,10 @@ html { scroll-behavior: smooth; }
 body {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
+  /* A safety net: nothing may make the whole page scroll sideways. "clip" (unlike
+     "hidden") does not turn the page into a scroll container, so the sticky headers
+     keep working. */
+  overflow-x: clip;
 }
 
 body {

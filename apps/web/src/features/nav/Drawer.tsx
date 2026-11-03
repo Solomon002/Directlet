@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 
 // A menu that slides in from the right over a dimmed page, used behind the
 // hamburger button. It behaves the way people expect from one:
@@ -82,7 +83,10 @@ export default function Drawer({
     wasOpen.current = open;
   }, [open, returnFocusRef]);
 
-  return (
+  // Drawn directly on the page, not inside whatever opened it. A header with a
+  // frosted-glass or sticky effect would otherwise trap a "fixed" menu inside its
+  // own small box, making it header-sized and pushing the page sideways.
+  return createPortal(
     <>
       <div
         aria-hidden="true"
@@ -117,7 +121,8 @@ export default function Drawer({
         </button>
         {children}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 
