@@ -1,9 +1,18 @@
 import { useState, type FormEvent } from "react";
-import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router";
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
 import { register } from "../../lib/session";
 import { parseApiError } from "../../lib/errors";
 import { homePathFor } from "../../lib/roles";
 import { useAuthStore } from "../../stores/authStore";
+
+const INPUT_CLASS =
+  "w-full rounded-lg border border-mist bg-white p-3 font-sans text-ink placeholder:text-ink/40 transition focus:border-trust-blue focus:outline-none focus:ring-2 focus:ring-trust-blue";
 
 export default function Register() {
   const status = useAuthStore((s) => s.status);
@@ -12,7 +21,8 @@ export default function Register() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   // Set when a visitor tapped "Message owner" and was sent here to sign up.
-  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname;
+  const from = (location.state as { from?: { pathname: string } } | null)?.from
+    ?.pathname;
 
   // Most people signing up are looking for a home; landlords pick the other tab.
   const [accountType, setAccountType] = useState<"HUNTER" | "LANDLORD">(
@@ -56,7 +66,9 @@ export default function Register() {
 
   return (
     <div className="mx-auto max-w-sm p-4 sm:p-8">
-      <h1 className="font-display text-2xl font-extrabold text-night-blue">Sign up</h1>
+      <h1 className="font-display text-2xl font-extrabold text-night-blue">
+        Sign up
+      </h1>
 
       <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-white p-1 shadow-sm">
         {(
@@ -82,7 +94,9 @@ export default function Register() {
           ? "Message owners directly and keep your chats in one place. No agent fees."
           : "List your compounds free, manage tenants, rent and complaints."}
       </p>
-      <p className="mt-1 text-xs text-ink/60">Renting already? Your landlord sends you an invite link instead.</p>
+      <p className="mt-1 text-xs text-ink/60">
+        Renting already? Your landlord sends you an invite link instead.
+      </p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm font-bold text-ink">
@@ -91,10 +105,12 @@ export default function Register() {
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
-            className="rounded-lg border border-mist px-3 py-2 font-sans text-ink"
+            className={INPUT_CLASS}
           />
           {fieldErrors.fullName && (
-            <span className="text-xs font-normal text-red-600">{fieldErrors.fullName[0]}</span>
+            <span className="text-xs font-normal text-red-600">
+              {fieldErrors.fullName[0]}
+            </span>
           )}
         </label>
 
@@ -105,10 +121,12 @@ export default function Register() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="rounded-lg border border-mist px-3 py-2 font-sans text-ink"
+            className={INPUT_CLASS}
           />
           {fieldErrors.email && (
-            <span className="text-xs font-normal text-red-600">{fieldErrors.email[0]}</span>
+            <span className="text-xs font-normal text-red-600">
+              {fieldErrors.email[0]}
+            </span>
           )}
         </label>
 
@@ -118,10 +136,12 @@ export default function Register() {
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="rounded-lg border border-mist px-3 py-2 font-sans text-ink"
+            className={INPUT_CLASS}
           />
           {fieldErrors.phone && (
-            <span className="text-xs font-normal text-red-600">{fieldErrors.phone[0]}</span>
+            <span className="text-xs font-normal text-red-600">
+              {fieldErrors.phone[0]}
+            </span>
           )}
         </label>
 
@@ -133,14 +153,18 @@ export default function Register() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={8}
-            className="rounded-lg border border-mist px-3 py-2 font-sans text-ink"
+            className={INPUT_CLASS}
           />
           {fieldErrors.password && (
-            <span className="text-xs font-normal text-red-600">{fieldErrors.password[0]}</span>
+            <span className="text-xs font-normal text-red-600">
+              {fieldErrors.password[0]}
+            </span>
           )}
         </label>
 
-        {formError && <p className="text-sm font-bold text-red-600">{formError}</p>}
+        {formError && (
+          <p className="text-sm font-bold text-red-600">{formError}</p>
+        )}
 
         <button
           type="submit"
@@ -153,7 +177,11 @@ export default function Register() {
 
       <p className="mt-4 text-sm text-ink">
         Already have an account?{" "}
-        <Link to="/login" state={location.state} className="font-bold text-trust-blue">
+        <Link
+          to="/login"
+          state={location.state}
+          className="font-bold text-trust-blue"
+        >
           Log in
         </Link>
       </p>
