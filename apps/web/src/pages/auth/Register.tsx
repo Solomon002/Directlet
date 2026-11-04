@@ -12,7 +12,7 @@ import { homePathFor } from "../../lib/roles";
 import { useAuthStore } from "../../stores/authStore";
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-mist bg-white p-3 font-sans text-ink placeholder:text-ink/40 transition focus:border-trust-blue focus:outline-none focus:ring-2 focus:ring-trust-blue";
+  "w-full rounded-lg border border-mist p-3 font-sans text-ink placeholder:text-ink/40 transition focus:border-trust-blue focus:outline-none focus:ring-2 focus:ring-trust-blue";
 
 export default function Register() {
   const status = useAuthStore((s) => s.status);
