@@ -22,6 +22,8 @@ import { adminRouter } from "./modules/admin/routes";
 import { jobsRouter } from "./modules/jobs/routes";
 import { verificationRouter } from "./modules/verification/routes";
 import { viewingsRouter } from "./modules/viewings/routes";
+import { emailRouter } from "./modules/email/routes";
+import { reportsRouter } from "./modules/reports/routes";
 
 export const app = express();
 
@@ -61,6 +63,8 @@ app.use("/conversations", noStore, conversationsRouter);
 app.use("/analytics", analyticsRouter);
 app.use("/verification", noStore, verificationRouter);
 app.use("/viewings", noStore, viewingsRouter);
+app.use("/email", noStore, emailRouter);
+app.use("/reports", noStore, reportsRouter);
 app.use("/admin", noStore, adminRouter);
 app.use("/jobs", noStore, jobsRouter);
 

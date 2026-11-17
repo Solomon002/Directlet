@@ -9,6 +9,10 @@ import StartConversation from "../../features/messages/StartConversation";
 import { useAuthStore } from "../../stores/authStore";
 import { formatRent, naira } from "../../lib/money";
 import { VerifiedBadge, confirmedText } from "../../features/verification/Badge";
+import ReviewsSection from "../../features/trust/ReviewsSection";
+import ReportListing from "../../features/trust/ReportListing";
+import ConfirmEmail from "../../features/trust/ConfirmEmail";
+import Stars from "../../features/trust/Stars";
 
 // One large picture with a strip of the rest to switch between. Pictures of a single
 // flat say which one, so a visitor knows what they are looking at.
@@ -113,18 +117,19 @@ export default function CompoundPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
+  async function load() {
     if (!propertyId) return;
-    void (async () => {
-      try {
-        const data = await getPublicProperty(propertyId);
-        setProperty(data);
-      } catch (err) {
-        setLoadError(parseApiError(err).message);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    try {
+      setProperty(await getPublicProperty(propertyId));
+    } catch (err) {
+      setLoadError(parseApiError(err).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
   }, [propertyId]);
 
   function toggleForm(unitId: string) {
@@ -170,8 +175,15 @@ export default function CompoundPage() {
       <p className="mt-1 text-sm text-ink">
         {property.address}, {property.area}, {property.city}, {property.state}
       </p>
-      <div className="mt-2">
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
         <VerifiedBadge landlord={property.landlord} detailed />
+        {property.reviews && property.reviews.count > 0 && (
+          <span className="inline-flex items-center gap-1.5 text-sm text-ink">
+            <Stars value={property.reviews.average ?? 0} />
+            <span className="font-bold">{property.reviews.average}</span>
+            <span className="text-ink/60">({property.reviews.count})</span>
+          </span>
+        )}
       </div>
       <Gallery property={property} />
       {property.description && <p className="mt-2 text-ink">{property.description}</p>}
@@ -275,7 +287,13 @@ export default function CompoundPage() {
               </div>
             )}
 
-            {unit.isVacant && openUnitId === unit.id && user && (
+            {unit.isVacant && openUnitId === unit.id && user?.needsEmailConfirmation && (
+              <div className="mt-3 max-w-sm">
+                <ConfirmEmail compact />
+              </div>
+            )}
+
+            {unit.isVacant && openUnitId === unit.id && user && !user.needsEmailConfirmation && (
               <form
                 onSubmit={(e) => void handleRequestInspection(e, unit.id)}
                 className="mt-3 flex max-w-sm flex-col gap-3 rounded-xl bg-mist p-4"
@@ -344,6 +362,9 @@ export default function CompoundPage() {
           </li>
         ))}
       </ul>
+
+      {property.reviews && <ReviewsSection propertyId={property.id} reviews={property.reviews} onPosted={() => void load()} />}
+      <ReportListing propertyId={property.id} />
     </div>
   );
 }

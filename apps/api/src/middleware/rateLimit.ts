@@ -105,6 +105,38 @@ export const viewingRequestRateLimiter = rateLimit({
   message: tooMany("You are sending viewing requests too quickly. Try again later."),
 });
 
+export const emailVerifyRateLimiter = rateLimit({
+  ...base,
+  windowMs: 15 * MINUTE,
+  limit: 30,
+  keyGenerator: ipKey,
+  message: tooMany("Too many attempts. Try again later."),
+});
+
+export const emailResendRateLimiter = rateLimit({
+  ...base,
+  windowMs: 60 * MINUTE,
+  limit: 6,
+  keyGenerator: userKey,
+  message: tooMany("Too many emails requested. Try again later."),
+});
+
+export const reportRateLimiter = rateLimit({
+  ...base,
+  windowMs: 60 * MINUTE,
+  limit: 10,
+  keyGenerator: userKey,
+  message: tooMany("You are sending reports too quickly. Try again later."),
+});
+
+export const reviewRateLimiter = rateLimit({
+  ...base,
+  windowMs: 60 * MINUTE,
+  limit: 10,
+  keyGenerator: userKey,
+  message: tooMany("You are posting reviews too quickly. Try again later."),
+});
+
 export const refreshRateLimiter = rateLimit({
   ...base,
   windowMs: 15 * MINUTE,

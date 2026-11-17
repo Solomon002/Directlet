@@ -7,6 +7,8 @@ export const registerSchema = z.object({
   phone: z.string().min(7).optional(),
   // Tenants never self-register; a landlord invites them.
   accountType: z.enum(["LANDLORD", "HUNTER"]).default("LANDLORD"),
+  // The answer from the "are you a robot" check. Required when the site has it switched on.
+  captchaToken: z.string().min(10).max(4096).optional(),
 });
 
 export const loginSchema = z.object({

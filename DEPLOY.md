@@ -38,7 +38,11 @@ the routes, and a daily job that issues the next rent charges.
 | `REFRESH_COOKIE_PATH` | `/api/auth` |
 | `TRUST_PROXY_HOPS` | `1` |
 | `DB_POOL_MAX` | `1` |
-| `CRON_SECRET` | A random string, 32+ characters. Vercel sends it to the daily job |
+| `CRON_SECRET` | A random string, 32+ characters. Vercel sends it to the daily jobs |
+| `RESEND_API_KEY` | *(optional)* From resend.com. Switches on real emails: confirming addresses, viewing notices and reminders |
+| `EMAIL_FROM` | *(optional)* Who emails come from, e.g. `DirectLet <hello@yourdomain.com>`. The default only delivers to your own address, so verify your domain in Resend first |
+| `HCAPTCHA_SITEKEY`, `HCAPTCHA_SECRET` | *(optional)* From hcaptcha.com. Switches on the "select the images that contain..." robot check on sign-up. Set both. The site key is public, the secret is not |
+| `VITE_DEMO_LANDLORD_PASSWORD`, `VITE_DEMO_TENANT_PASSWORD` | *(optional)* Show the demo passwords on the login page. Anything set here is visible to everyone |
 
 Make a random string with:
 
@@ -49,6 +53,29 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 `WEB_ORIGIN` is used for tenant invite links and to reject requests from other
 sites, so it must match the address people actually use. Change it when you add
 a custom domain.
+
+### The robot check on sign-up
+
+Without both `HCAPTCHA_` values the sign-up page has no robot check. Once set (and
+redeployed), sign-up shows an hCaptcha box ("I am human", and picture puzzles such as
+"select all images with a cat", chosen at random for every visitor), and the server
+refuses any sign-up that did not pass it. Login and the rest of the site are not affected.
+
+The test scripts sign up accounts without passing the check, so run them against an API
+that does not have these two values set (your laptop), not the live site.
+
+### Turning on email
+
+Without `RESEND_API_KEY` the site works, but nothing is sent and people are not asked to
+confirm their email. Once you set it (and redeploy):
+
+- new sign-ups get a confirmation link, and must confirm before requesting a viewing
+- landlords are emailed about new viewing requests, and visitors about the answer
+- both sides are emailed the day before a confirmed viewing (a second daily job)
+- landlords are emailed when a listing is paused after several reports
+
+People who signed up before email was switched on are asked to confirm the next time
+they want a viewing; the site shows them a banner with a "send it again" button.
 
 ## 3. After it deploys
 
@@ -116,6 +143,7 @@ the same way, or makes a random one and prints it.
 - Rate limits are counted in memory, per running function. They slow down
   guessing, but a determined attacker spread across instances is not fully
   stopped. A shared store (for example Upstash Redis) would fix that.
-- The rent job runs once a day (the free plan allows no more).
+- The rent job and the viewing-reminder job each run once a day (the free plan allows
+  two daily jobs and no more).
 - Payment proofs are stored in the database (2 MB each). Move them to file
   storage if uploads grow.

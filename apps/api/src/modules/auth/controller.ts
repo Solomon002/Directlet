@@ -1,7 +1,13 @@
 import type { Request, Response } from "express";
 import { env } from "../../config/env";
 import { AppError } from "../../utils/AppError";
+import { requireHuman, captchaSiteKey } from "../../lib/captcha";
 import * as authService from "./service";
+
+// What the sign-up page needs to know: whether to show the robot check, and with which key.
+export function config(_req: Request, res: Response) {
+  res.status(200).json({ captchaSiteKey });
+}
 
 const REFRESH_COOKIE = "directlet_refresh";
 
@@ -28,8 +34,11 @@ function readRefreshCookie(req: Request): string | undefined {
 }
 
 export async function register(req: Request, res: Response) {
+  // Before any account work, so a bot costs us a lookup and nothing else.
+  await requireHuman(req.body.captchaToken, req.ip);
+  const { captchaToken: _token, ...input } = req.body;
   const { user, accessToken, refreshToken, refreshExpiresAt } =
-    await authService.register(req.body);
+    await authService.register(input);
   setRefreshCookie(res, refreshToken, refreshExpiresAt);
   res.status(201).json({ user, accessToken });
 }

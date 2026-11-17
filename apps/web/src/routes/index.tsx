@@ -12,6 +12,7 @@ import Viewings from "../pages/public/Viewings";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import AcceptInvite from "../pages/auth/AcceptInvite";
+import VerifyEmail from "../pages/auth/VerifyEmail";
 import Dashboard from "../pages/landlord/Dashboard";
 import Properties from "../pages/landlord/Properties";
 import PropertyDetail from "../pages/landlord/PropertyDetail";
@@ -26,6 +27,7 @@ import AdminUserDetail from "../pages/admin/UserDetail";
 import AdminProperties from "../pages/admin/Properties";
 import AdminActivity from "../pages/admin/Activity";
 import AdminVerifications from "../pages/admin/Verifications";
+import AdminReports from "../pages/admin/Reports";
 import AdminVerificationDetail from "../pages/admin/VerificationDetail";
 import LandlordVerification from "../pages/landlord/Verification";
 
@@ -41,6 +43,7 @@ export const router = createBrowserRouter([
           { path: "/login", element: <Login /> },
           { path: "/register", element: <Register /> },
           { path: "/invite/:token", element: <AcceptInvite /> },
+          { path: "/verify-email", element: <VerifyEmail /> },
           { path: "/compounds", element: <Browse /> },
           { path: "/compounds/:propertyId", element: <CompoundPage /> },
           {
@@ -102,6 +105,7 @@ export const router = createBrowserRouter([
               { path: "users/:userId", element: <AdminUserDetail /> },
               { path: "properties", element: <AdminProperties /> },
               { path: "verifications", element: <AdminVerifications /> },
+              { path: "reports", element: <AdminReports /> },
               { path: "verifications/:id", element: <AdminVerificationDetail /> },
               { path: "activity", element: <AdminActivity /> },
             ],

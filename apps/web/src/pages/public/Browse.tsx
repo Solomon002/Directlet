@@ -8,6 +8,7 @@ import StartConversation from "../../features/messages/StartConversation";
 import { useAuthStore } from "../../stores/authStore";
 import { formatRent } from "../../lib/money";
 import { VerifiedBadge, confirmedText } from "../../features/verification/Badge";
+import Stars from "../../features/trust/Stars";
 
 function bedroomText(min?: number | null, max?: number | null) {
   if (min == null || max == null) return null;
@@ -66,8 +67,15 @@ function ListingCard({ property }: { property: PublicProperty }) {
         {vacant ? `${vacant} flat${vacant === 1 ? "" : "s"} available` : "Nothing available now"}
       </p>
       {vacant > 0 && <p className="text-xs text-ink/60">{confirmedText(property.availabilityConfirmedDaysAgo)}</p>}
-      <div className="mt-2">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
         <VerifiedBadge landlord={property.landlord} />
+        {property.rating && (
+          <span className="inline-flex items-center gap-1 text-xs text-ink">
+            <Stars value={property.rating.average} />
+            <span className="font-bold">{property.rating.average}</span>
+            <span className="text-ink/60">({property.rating.count})</span>
+          </span>
+        )}
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         {vacant > 0 && user?.role !== "LANDLORD" && (

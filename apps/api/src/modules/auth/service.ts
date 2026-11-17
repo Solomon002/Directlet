@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { waitUntil } from "@vercel/functions";
 import { prisma } from "../../lib/prisma";
+import { emailEnabled } from "../../lib/email";
+import { startEmailVerification } from "../email/service";
 import { hashPassword, comparePassword } from "../../lib/password";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../../lib/jwt";
 import { AppError } from "../../utils/AppError";
@@ -19,8 +22,18 @@ function toAuthUser(user: {
   email: string;
   fullName: string;
   role: UserRole;
+  emailVerifiedAt: Date | null;
 }) {
-  return { id: user.id, email: user.email, fullName: user.fullName, role: user.role };
+  return {
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    role: user.role,
+    emailVerified: user.emailVerifiedAt !== null,
+    // True only when emails can be sent and this address is still unconfirmed, so the
+    // site never asks someone to do something that cannot be done.
+    needsEmailConfirmation: emailEnabled && user.emailVerifiedAt === null,
+  };
 }
 
 function assertNotSuspended(user: { suspendedAt: Date | null }) {
@@ -92,6 +105,12 @@ export async function register(input: RegisterInput) {
       }
       throw error;
     });
+
+  // Ask them to confirm the address. Without an email provider there is nobody to
+  // receive it, so nothing is sent and the confirmation requirement stays off.
+  if (emailEnabled) {
+    waitUntil(startEmailVerification(user).catch((error) => console.error("Could not start email verification", error)));
+  }
 
   const tokens = await issueTokens(user);
   return { user: toAuthUser(user), ...tokens };
@@ -196,7 +215,8 @@ export async function acceptInvite(token: string, password: string) {
 
   const updated = await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash, inviteToken: null, inviteExpiresAt: null },
+    // Opening the emailed invite link proves they own the address.
+    data: { passwordHash, inviteToken: null, inviteExpiresAt: null, emailVerifiedAt: user.emailVerifiedAt ?? new Date() },
   });
 
   const tokens = await issueTokens(updated);

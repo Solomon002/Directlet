@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   Link,
   Navigate,
@@ -6,7 +6,8 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router";
-import { register } from "../../lib/session";
+import { getAuthConfig, register } from "../../lib/session";
+import Captcha from "../../features/auth/Captcha";
 import { parseApiError } from "../../lib/errors";
 import { homePathFor } from "../../lib/roles";
 import { useAuthStore } from "../../stores/authStore";
@@ -35,6 +36,18 @@ export default function Register() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  // The "are you a robot" check. siteKey is undefined while we ask the server, null when it is off.
+  const [siteKey, setSiteKey] = useState<string | null | undefined>(undefined);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const [captchaBroken, setCaptchaBroken] = useState(false);
+
+  useEffect(() => {
+    getAuthConfig()
+      .then((config) => setSiteKey(config.captchaSiteKey))
+      // If we cannot ask, show no check; the server still refuses a sign-up that needs one.
+      .catch(() => setSiteKey(null));
+  }, []);
 
   if (status === "authenticated" && user) {
     return <Navigate to={from ?? homePathFor(user.role)} replace />;
@@ -53,12 +66,16 @@ export default function Register() {
         password,
         phone: phone || undefined,
         accountType,
+        captchaToken: captchaToken ?? undefined,
       });
       navigate(from ?? homePathFor(newUser.role), { replace: true });
     } catch (err) {
       const parsed = parseApiError(err);
       setFormError(parsed.message);
       setFieldErrors(parsed.fieldErrors);
+      // A check answer works once, so ask for a new one.
+      setCaptchaToken(null);
+      setCaptchaReset((n) => n + 1);
     } finally {
       setSubmitting(false);
     }
@@ -176,6 +193,23 @@ export default function Register() {
               )}
             </label>
 
+            {siteKey && (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-bold text-ink">Are you a robot?</p>
+                <Captcha
+                  siteKey={siteKey}
+                  onToken={setCaptchaToken}
+                  resetSignal={captchaReset}
+                  onLoadError={() => setCaptchaBroken(true)}
+                />
+                {captchaBroken && (
+                  <p role="alert" className="text-xs font-bold text-red-600">
+                    The robot check could not load. Check your connection and reload the page.
+                  </p>
+                )}
+              </div>
+            )}
+
             {formError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm font-bold text-red-600">{formError}</p>
@@ -184,7 +218,7 @@ export default function Register() {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (Boolean(siteKey) && !captchaToken)}
               className="mt-2 w-full rounded-xl bg-trust-blue px-5 py-3 font-display font-extrabold text-white transition hover:bg-[#133c82] disabled:opacity-60 shadow-sm"
             >
               {submitting ? "Creating account..." : "Create account"}

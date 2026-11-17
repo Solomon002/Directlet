@@ -148,6 +148,12 @@ export default function Overview() {
           />
           <Stat label="Verified" value={data.verifications?.VERIFIED ?? 0} tone="good" />
           <Stat label="Rejected" value={data.verifications?.REJECTED ?? 0} />
+          <Stat
+            label="Reported listings"
+            value={data.reports?.openListings ?? 0}
+            note="waiting for a decision"
+            tone={data.reports?.openListings ? "alert" : undefined}
+          />
         </div>
       </Section>
 

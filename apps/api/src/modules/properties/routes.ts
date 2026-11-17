@@ -8,6 +8,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import * as propertyController from "./controller";
 import { unitsRouter } from "../units/routes";
 import { photosRouter } from "../photos/routes";
+import { landlordReviewsRouter } from "../reviews/routes";
 
 export const propertiesRouter = Router();
 
@@ -27,3 +28,4 @@ propertiesRouter.delete("/:propertyId", asyncHandler(propertyController.remove))
 
 propertiesRouter.use("/:propertyId/units", unitsRouter);
 propertiesRouter.use("/:propertyId/photos", photosRouter);
+propertiesRouter.use("/:propertyId/reviews", landlordReviewsRouter);

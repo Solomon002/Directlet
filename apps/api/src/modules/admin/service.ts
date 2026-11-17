@@ -141,8 +141,10 @@ export async function getOverview() {
   const unpaid = (chargeTotals._sum.amount ?? new Prisma.Decimal(0)).minus(chargeTotals._sum.amountPaid ?? 0);
 
   const verificationRows = await prisma.landlordVerification.groupBy({ by: ["status"], _count: true });
+  const reportedListings = (await prisma.report.groupBy({ by: ["propertyId"], where: { status: "OPEN" } })).length;
 
   return {
+    reports: { openListings: reportedListings },
     verifications: Object.fromEntries(verificationRows.map((row) => [row.status, row._count])),
     users: {
       byRole: countByRole(usersByRole),

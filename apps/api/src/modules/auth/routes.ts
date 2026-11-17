@@ -14,6 +14,8 @@ import * as authController from "./controller";
 
 export const authRouter = Router();
 
+authRouter.get("/config", authController.config);
+
 authRouter.post(
   "/register",
   registerRateLimiter,

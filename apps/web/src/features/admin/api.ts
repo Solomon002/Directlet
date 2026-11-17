@@ -5,6 +5,7 @@ type ByRole = Partial<Record<UserRole, number>>;
 
 export type AdminOverview = {
   verifications: Partial<Record<"PENDING" | "VERIFIED" | "REJECTED", number>>;
+  reports: { openListings: number };
   users: { byRole: ByRole; suspended: number; new7d: ByRole; new30d: ByRole };
   properties: {
     total: number;

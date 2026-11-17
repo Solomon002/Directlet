@@ -26,6 +26,24 @@ export type PublicUnit = {
   moveInTotal: string;
 };
 
+export type PublicReviews = {
+  count: number;
+  average: number | null;
+  matchedPhotosPercent: number | null;
+  priceAsStatedPercent: number | null;
+  items: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    matchedPhotos: boolean;
+    priceAsStated: boolean;
+    landlordResponse: string | null;
+    respondedAt: string | null;
+    createdAt: string;
+    reviewerName: string;
+  }[];
+};
+
 export type PublicLandlord =
   | { verified: false }
   | {
@@ -49,6 +67,10 @@ export type PublicProperty = {
   latitude: number | null;
   longitude: number | null;
   landlord: PublicLandlord;
+  // List: average rating and count (null when there are none).
+  rating?: { average: number; count: number } | null;
+  // Detail: the rating summary and the latest reviews.
+  reviews?: PublicReviews;
   // List: the cover and how many pictures. Detail: all of them, cover first.
   coverPhotoId?: string | null;
   photoCount?: number;

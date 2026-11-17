@@ -138,8 +138,13 @@ writeFileSync(
         { handle: "filesystem" },
         { src: "/(.*)", dest: "/index.html" },
       ],
-      // Issues next rent charges once a day. Needs CRON_SECRET in the project settings.
-      crons: [{ path: "/api/jobs/rent-roll", schedule: "0 4 * * *" }],
+      // Daily jobs. Both need CRON_SECRET in the project settings.
+      //   rent-roll          issues the next rent charges
+      //   viewing-reminders  emails both sides the day before a confirmed viewing
+      crons: [
+        { path: "/api/jobs/rent-roll", schedule: "0 4 * * *" },
+        { path: "/api/jobs/viewing-reminders", schedule: "0 7 * * *" },
+      ],
     },
     null,
     2,

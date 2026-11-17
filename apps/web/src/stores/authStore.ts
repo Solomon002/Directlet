@@ -7,6 +7,8 @@ export type User = {
   email: string;
   fullName: string;
   role: UserRole;
+  emailVerified?: boolean;
+  needsEmailConfirmation?: boolean;
 };
 
 // "checking" lasts until the first session check finishes, so the app does not

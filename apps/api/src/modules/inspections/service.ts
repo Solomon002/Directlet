@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { isBeforeToday, scheduledDayHasPassed } from "../../lib/viewings";
+import { notifyVisitorOfAnswer } from "../../lib/notify";
 import * as tenancyService from "../tenancies/service";
 import type { InspectionStatus } from "../../generated/prisma/enums";
 import type {
@@ -12,6 +13,7 @@ import type {
 async function getOwnedInspection(landlordId: string, inspectionId: string) {
   const inspection = await prisma.inspectionRequest.findFirst({
     where: { id: inspectionId, unit: { property: { landlordId } } },
+    include: { unit: { select: { label: true, property: { select: { name: true } } } } },
   });
 
   if (!inspection) {
@@ -87,14 +89,22 @@ export async function scheduleInspection(
     throw new AppError(400, "Pick today or a later date", "VALIDATION_ERROR");
   }
 
-  return prisma.inspectionRequest.update({
+  const updated = await prisma.inspectionRequest.update({
     where: { id: inspection.id },
     data: {
       status: "SCHEDULED",
       scheduledFor: input.scheduledFor,
       ...(inspection.status === "SCHEDULED" ? { rescheduleCount: { increment: 1 } } : {}),
+      // A new day means a new reminder.
+      reminderSentAt: null,
     },
   });
+
+  notifyVisitorOfAnswer(inspection.email, inspection.name, inspection.unit.property.name, inspection.unit.label, {
+    kind: inspection.status === "SCHEDULED" ? "RESCHEDULED" : "ACCEPTED",
+    day: input.scheduledFor,
+  });
+  return updated;
 }
 
 export async function declineInspection(
@@ -105,10 +115,15 @@ export async function declineInspection(
   const inspection = await getOwnedInspection(landlordId, inspectionId);
   requireStatus(inspection, ["PENDING", "SCHEDULED"], "Only an open request can be declined");
 
-  return prisma.inspectionRequest.update({
+  const updated = await prisma.inspectionRequest.update({
     where: { id: inspection.id },
     data: { status: "DECLINED", landlordNote: input.landlordNote },
   });
+
+  notifyVisitorOfAnswer(inspection.email, inspection.name, inspection.unit.property.name, inspection.unit.label, {
+    kind: "DECLINED",
+  });
+  return updated;
 }
 
 export async function completeInspection(landlordId: string, inspectionId: string) {

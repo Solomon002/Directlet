@@ -14,6 +14,7 @@ import {
   type UnitInput,
 } from "../../features/properties/api";
 import PhotoManager from "../../features/photos/PhotoManager";
+import LandlordReviews from "../../features/trust/LandlordReviews";
 import { parseApiError } from "../../lib/errors";
 import { formatRent } from "../../lib/money";
 import { PlaceMap } from "../../features/maps/Maps";
@@ -445,6 +446,7 @@ export default function PropertyDetail() {
       {actionError && <p className="mt-4 text-sm font-bold text-red-600">{actionError}</p>}
 
       <PhotoManager propertyId={property.id} units={property.units ?? []} />
+      <LandlordReviews propertyId={property.id} />
 
       <div className="mt-8 flex items-center justify-between">
         <h2 className="font-display text-lg font-extrabold text-night-blue">Flats</h2>

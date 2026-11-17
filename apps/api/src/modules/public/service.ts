@@ -2,6 +2,9 @@ import { prisma } from "../../lib/prisma";
 import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../utils/AppError";
 import { availabilityState, daysSince } from "../../lib/availability";
+import { emailEnabled } from "../../lib/email";
+import { notifyLandlordOfRequest } from "../../lib/notify";
+import { publicSummary, ratingsFor } from "../reviews/service";
 import {
   MAX_ACTIVE_REQUESTS_PER_USER,
   RESTRICT_AFTER_MISSED,
@@ -171,6 +174,8 @@ export async function listPublicProperties(params: ListPublicPropertiesParams) {
     prisma.property.count({ where }),
   ]);
 
+  const ratings = await ratingsFor(properties.map((property) => property.id));
+
   return {
     properties: properties.map(({ units, landlord, photos, _count: propertyCounts, ...property }) => {
       const vacant = units.filter((unit) => unitAvailability(unit) === "AVAILABLE");
@@ -193,6 +198,7 @@ export async function listPublicProperties(params: ListPublicPropertiesParams) {
       return {
         ...property,
         landlord: publicLandlord(landlord.verification),
+        rating: ratings.get(property.id) ?? null,
         coverPhotoId: photos[0]?.id ?? null,
         photoCount: propertyCounts.photos,
         unitCount: units.length,
@@ -245,8 +251,10 @@ export async function getPublicProperty(propertyId: string) {
   }
 
   const { landlord, units, ...rest } = property;
+  const reviews = await publicSummary(property.id);
   return {
     ...rest,
+    reviews,
     landlord: publicLandlord(landlord.verification),
     units: units.map(({ _count, cautionDeposit, agreementFee, serviceCharge, agencyFee, ...unit }) => {
       const availability = unitAvailability({ _count, availabilityConfirmedAt: unit.availabilityConfirmedAt });
@@ -263,9 +271,21 @@ export async function getPublicProperty(propertyId: string) {
 }
 
 export async function createInspectionRequest(userId: string, unitId: string, input: CreateInspectionRequestInput) {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { fullName: true, email: true } });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { fullName: true, email: true, emailVerifiedAt: true },
+  });
   if (!user) {
     throw new AppError(401, "Sign in to request a viewing", "UNAUTHENTICATED");
+  }
+  // Landlords are asked to trust a stranger, so the stranger's email must be real. Only
+  // enforced once emails can be sent; before that nobody could confirm.
+  if (emailEnabled && !user.emailVerifiedAt) {
+    throw new AppError(
+      403,
+      "Confirm your email first. We sent you a link: check your inbox and spam folder, or ask for a new one.",
+      "EMAIL_NOT_VERIFIED",
+    );
   }
 
   if (input.preferredDate && isBeforeToday(input.preferredDate)) {
@@ -302,7 +322,10 @@ export async function createInspectionRequest(userId: string, unitId: string, in
 
   const unit = await prisma.unit.findFirst({
     where: { id: unitId, property: publiclyVisible },
-    include: { _count: { select: activeTenancyCount } },
+    include: {
+      _count: { select: activeTenancyCount },
+      property: { select: { name: true, landlord: { select: { email: true } } } },
+    },
   });
 
   if (!unit) {
@@ -321,7 +344,7 @@ export async function createInspectionRequest(userId: string, unitId: string, in
     );
   }
 
-  return prisma.inspectionRequest.create({
+  const created = await prisma.inspectionRequest.create({
     data: {
       unitId: unit.id,
       requesterId: userId,
@@ -338,4 +361,7 @@ export async function createInspectionRequest(userId: string, unitId: string, in
     },
     select: { id: true, unitId: true, status: true, preferredDate: true, createdAt: true },
   });
+
+  notifyLandlordOfRequest(unit.property.landlord.email, unit.property.name, unit.label);
+  return created;
 }

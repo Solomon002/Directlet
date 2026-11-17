@@ -45,10 +45,17 @@ export async function register(input: {
   password: string;
   phone?: string;
   accountType: "LANDLORD" | "HUNTER";
+  captchaToken?: string;
 }): Promise<User> {
   const res = await authApi.post<SessionResponse>("/auth/register", input);
   useAuthStore.getState().setSession(res.data.user, res.data.accessToken);
   return res.data.user;
+}
+
+// What the sign-up page needs: the public key for the robot check, or null when it is off.
+export async function getAuthConfig() {
+  const res = await authApi.get<{ captchaSiteKey: string | null }>("/auth/config");
+  return res.data;
 }
 
 // Logout always clears the local session, even if the server cannot be reached.

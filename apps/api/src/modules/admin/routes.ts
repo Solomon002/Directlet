@@ -5,7 +5,9 @@ import { requireRole } from "../../middleware/requireRole";
 import { validate } from "../../middleware/validate";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/AppError";
-import { rejectVerificationSchema } from "@directlet/shared";
+import { rejectVerificationSchema, resolveReportSchema } from "@directlet/shared";
+import * as reportService from "../reports/service";
+import * as reviewService from "../reviews/service";
 import * as adminService from "./service";
 import * as verificationService from "../verification/service";
 
@@ -140,6 +142,41 @@ adminRouter.post(
   asyncHandler(async (req: Request, res: Response) => {
     await verificationService.reject(req.user!.sub, req.params.id as string, req.body.reason);
     res.status(200).json({ verification: { id: req.params.id } });
+  }),
+);
+
+// --- Reports and reviews ---
+
+adminRouter.get(
+  "/reports",
+  asyncHandler(async (req: Request, res: Response) => {
+    res.status(200).json(
+      await reportService.listForAdmin({ status: req.query.status === "handled" ? "HANDLED" : "OPEN", page: page(req) }),
+    );
+  }),
+);
+
+adminRouter.post(
+  "/reports/property/:propertyId/resolve",
+  validate(resolveReportSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    await reportService.resolveForProperty(req.user!.sub, req.params.propertyId as string, req.body);
+    res.status(200).json({ property: { id: req.params.propertyId } });
+  }),
+);
+
+adminRouter.get(
+  "/properties/:propertyId/reviews",
+  asyncHandler(async (req: Request, res: Response) => {
+    res.status(200).json({ reviews: await reviewService.listForAdmin(req.params.propertyId as string) });
+  }),
+);
+
+adminRouter.post(
+  "/reviews/:reviewId/remove",
+  asyncHandler(async (req: Request, res: Response) => {
+    await reviewService.removeAsAdmin(req.params.reviewId as string);
+    res.status(200).json({ review: { id: req.params.reviewId } });
   }),
 );
 

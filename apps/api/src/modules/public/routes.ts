@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { createInspectionRequestSchema } from "@directlet/shared";
+import { createInspectionRequestSchema, createReviewSchema } from "@directlet/shared";
+import * as reviewService from "../reviews/service";
 import { authenticate } from "../../middleware/authenticate";
 import { requireRole } from "../../middleware/requireRole";
-import { viewingRequestRateLimiter } from "../../middleware/rateLimit";
+import { reviewRateLimiter, viewingRequestRateLimiter } from "../../middleware/rateLimit";
 import { validate } from "../../middleware/validate";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { getPublicPhoto } from "../photos/service";
@@ -12,6 +13,26 @@ export const publicRouter = Router();
 
 publicRouter.get("/properties", asyncHandler(publicController.listProperties));
 publicRouter.get("/properties/:propertyId", asyncHandler(publicController.getProperty));
+// Reviews need an account and a real visit (checked in the service).
+publicRouter.get(
+  "/properties/:propertyId/review-eligibility",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    res.status(200).json(await reviewService.eligibility(req.user!.sub, req.params.propertyId as string));
+  }),
+);
+publicRouter.post(
+  "/properties/:propertyId/reviews",
+  authenticate,
+  requireRole("HUNTER", "TENANT"),
+  reviewRateLimiter,
+  validate(createReviewSchema),
+  asyncHandler(async (req, res) => {
+    const review = await reviewService.createReview(req.user!.sub, req.params.propertyId as string, req.body);
+    res.status(201).json({ review });
+  }),
+);
+
 // A picture. Its id never points at different bytes, so it can be cached for good.
 publicRouter.get(
   "/photos/:photoId",
