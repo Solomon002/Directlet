@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router";
-import { listPublicProperties, type PublicProperty } from "../../features/public/api";
+import { listPublicProperties, photoUrl, type PublicProperty } from "../../features/public/api";
 import { parseApiError } from "../../lib/errors";
 import { PlacesMap } from "../../features/maps/Maps";
 import { hasLocation } from "../../features/maps/geo";
 import StartConversation from "../../features/messages/StartConversation";
 import { useAuthStore } from "../../stores/authStore";
 import { formatRent } from "../../lib/money";
+import { VerifiedBadge, confirmedText } from "../../features/verification/Badge";
 
 function bedroomText(min?: number | null, max?: number | null) {
   if (min == null || max == null) return null;
@@ -14,8 +15,8 @@ function bedroomText(min?: number | null, max?: number | null) {
 }
 
 // Follows the brand manual's listing card: title, "Area, city / beds",
-// "price / year", then Message owner. The "Verified owner" badge waits until
-// owners are actually verified.
+// "price / year", then Message owner. The badge shows whether the owner has been
+// verified, and the list puts verified owners first.
 function ListingCard({ property }: { property: PublicProperty }) {
   const user = useAuthStore((s) => s.user);
   const beds = bedroomText(property.bedroomsMin, property.bedroomsMax);
@@ -23,7 +24,31 @@ function ListingCard({ property }: { property: PublicProperty }) {
   const hasRange = vacant > 1 || (vacant === 0 && (property.unitCount ?? 0) > 1);
 
   return (
-    <div className="flex flex-col rounded-xl bg-white p-5 shadow-sm">
+    <div className="flex flex-col overflow-hidden rounded-xl bg-white p-5 shadow-sm">
+      <Link to={`/compounds/${property.id}`} aria-label={`Photos of ${property.name}`} className="-mx-5 -mt-5 mb-4 block">
+        {property.coverPhotoId ? (
+          <span className="relative block">
+            <img
+              src={photoUrl(property.coverPhotoId)}
+              alt={`${property.name}, ${property.area}`}
+              loading="lazy"
+              className="aspect-[4/3] w-full bg-mist object-cover"
+            />
+            {(property.photoCount ?? 0) > 1 && (
+              <span className="absolute bottom-2 right-2 rounded-full bg-night-blue/80 px-2.5 py-0.5 text-xs font-bold text-white">
+                {property.photoCount} photos
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1 bg-mist text-ink/50">
+            <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10M10 19.5v-5h4v5" />
+            </svg>
+            <span className="text-xs font-bold">No photos yet</span>
+          </span>
+        )}
+      </Link>
       <Link to={`/compounds/${property.id}`} className="font-display text-lg font-extrabold text-night-blue hover:underline">
         {property.name}
       </Link>
@@ -38,8 +63,12 @@ function ListingCard({ property }: { property: PublicProperty }) {
         </p>
       )}
       <p className={vacant ? "mt-1 text-sm font-bold text-direct-green" : "mt-1 text-sm font-bold text-ink/60"}>
-        {vacant ? `${vacant} flat${vacant === 1 ? "" : "s"} available` : "Fully let"}
+        {vacant ? `${vacant} flat${vacant === 1 ? "" : "s"} available` : "Nothing available now"}
       </p>
+      {vacant > 0 && <p className="text-xs text-ink/60">{confirmedText(property.availabilityConfirmedDaysAgo)}</p>}
+      <div className="mt-2">
+        <VerifiedBadge landlord={property.landlord} />
+      </div>
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         {vacant > 0 && user?.role !== "LANDLORD" && (
           <StartConversation

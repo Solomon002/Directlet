@@ -12,5 +12,14 @@ export default function LandlordLayout() {
     { to: "/landlord/messages", label: "Messages", icon: "chat", badge: unread },
   ];
 
-  return <PortalShell tone="landlord" homePath="/landlord" roleLabel="Landlord" items={items} />;
+  // Not a tab: the phone tab bar is already full. It is in the sidebar and the menu.
+  return (
+    <PortalShell
+      tone="landlord"
+      homePath="/landlord"
+      roleLabel="Landlord"
+      items={items}
+      extraLink={{ to: "/landlord/verification", label: "Get verified" }}
+    />
+  );
 }

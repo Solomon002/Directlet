@@ -1,8 +1,26 @@
 import { prisma } from "../../lib/prisma";
+import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../utils/AppError";
-import type { Prisma } from "../../generated/prisma/client";
+import { availabilityState, daysSince } from "../../lib/availability";
+import {
+  MAX_ACTIVE_REQUESTS_PER_USER,
+  RESTRICT_AFTER_MISSED,
+  RESTRICT_WINDOW_DAYS,
+  isBeforeToday,
+} from "../../lib/viewings";
 import type { RentFrequency } from "../../generated/prisma/enums";
 import type { CreateInspectionRequestInput } from "@directlet/shared";
+
+// What a landlord's verification shows publicly. Only an approved application counts,
+// and only a company's CAC details are shown (an individual's documents never are).
+const publicVerificationFields = {
+  status: true,
+  landlordType: true,
+  cacType: true,
+  cacNumber: true,
+  registeredName: true,
+  verifiedAt: true,
+} as const;
 
 // Only what a visitor needs. Tenant details never leave the API; a unit only
 // says whether it is vacant.
@@ -16,6 +34,7 @@ const publicPropertyFields = {
   description: true,
   latitude: true,
   longitude: true,
+  landlord: { select: { verification: { select: publicVerificationFields } } },
 } as const;
 
 const activeTenancyCount = { tenancies: { where: { status: "ACTIVE" as const } } };
@@ -41,6 +60,71 @@ function yearlyRent(amount: Prisma.Decimal, frequency: RentFrequency) {
   return Number(amount) * PERIODS_PER_YEAR[frequency];
 }
 
+type PublicVerification = {
+  status: "PENDING" | "VERIFIED" | "REJECTED";
+  landlordType: "INDIVIDUAL" | "COMPANY";
+  cacType: "RC" | "BN" | "IT" | null;
+  cacNumber: string | null;
+  registeredName: string | null;
+  verifiedAt: Date | null;
+} | null;
+
+function publicLandlord(verification: PublicVerification | undefined) {
+  if (verification?.status !== "VERIFIED") return { verified: false as const };
+  return {
+    verified: true as const,
+    landlordType: verification.landlordType,
+    verifiedAt: verification.verifiedAt,
+    ...(verification.landlordType === "COMPANY"
+      ? {
+          cacType: verification.cacType,
+          cacNumber: verification.cacNumber,
+          registeredName: verification.registeredName,
+        }
+      : {}),
+  };
+}
+
+type UnitAvailability = "AVAILABLE" | "UNCONFIRMED" | "LET";
+
+// A let flat is LET. A vacant flat the landlord has not vouched for in a month is
+// UNCONFIRMED: shown, but not offered for viewings until they confirm again.
+function unitAvailability(unit: { _count: { tenancies: number }; availabilityConfirmedAt: Date }): UnitAvailability {
+  if (unit._count.tenancies > 0) return "LET";
+  return availabilityState(unit.availabilityConfirmedAt) === "STALE" ? "UNCONFIRMED" : "AVAILABLE";
+}
+
+type UnitFees = {
+  rentAmount: Prisma.Decimal;
+  cautionDeposit: Prisma.Decimal | null;
+  agreementFee: Prisma.Decimal | null;
+  serviceCharge: Prisma.Decimal | null;
+  agencyFee: Prisma.Decimal | null;
+};
+
+const FEE_LABELS = [
+  ["cautionDeposit", "Caution deposit"],
+  ["agreementFee", "Agreement fee"],
+  ["serviceCharge", "Service charge"],
+  ["agencyFee", "Agency fee"],
+] as const;
+
+// The visitor's real first payment: the rent plus every fee the landlord has stated.
+// Fees nobody has stated are listed, so "total" is never mistaken for "everything".
+function pricing(unit: UnitFees) {
+  const fees = FEE_LABELS.map(([key, label]) => ({
+    key,
+    label,
+    amount: unit[key] === null ? null : unit[key].toFixed(2),
+  }));
+  const stated = FEE_LABELS.reduce((sum, [key]) => sum.plus(unit[key] ?? 0), new Prisma.Decimal(0));
+  return {
+    fees,
+    unstatedFees: fees.filter((fee) => fee.amount === null).map((fee) => fee.label),
+    moveInTotal: unit.rentAmount.plus(stated).toFixed(2),
+  };
+}
+
 type ListPublicPropertiesParams = {
   city?: string;
   area?: string;
@@ -61,16 +145,24 @@ export async function listPublicProperties(params: ListPublicPropertiesParams) {
   const [properties, total] = await Promise.all([
     prisma.property.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      // Verified landlords first, then newest.
+      orderBy: [
+        { landlord: { verification: { verifiedAt: { sort: "desc", nulls: "last" } } } },
+        { createdAt: "desc" },
+      ],
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
         ...publicPropertyFields,
+        // Just the cover, and how many there are; the full set is on the listing page.
+        photos: { orderBy: { position: "asc" }, take: 1, select: { id: true } },
+        _count: { select: { photos: true } },
         units: {
           select: {
             bedrooms: true,
             rentAmount: true,
             rentFrequency: true,
+            availabilityConfirmedAt: true,
             _count: { select: activeTenancyCount },
           },
         },
@@ -80,10 +172,10 @@ export async function listPublicProperties(params: ListPublicPropertiesParams) {
   ]);
 
   return {
-    properties: properties.map(({ units, ...property }) => {
-      const vacant = units.filter((unit) => unit._count.tenancies === 0);
-      // The card describes what a visitor can actually rent; a fully let
-      // compound falls back to all its flats.
+    properties: properties.map(({ units, landlord, photos, _count: propertyCounts, ...property }) => {
+      const vacant = units.filter((unit) => unitAvailability(unit) === "AVAILABLE");
+      // The card describes what a visitor can actually rent; a compound with
+      // nothing on offer falls back to all its flats.
       const shown = vacant.length > 0 ? vacant : units;
       const cheapest = shown.reduce<(typeof shown)[number] | null>(
         (best, unit) =>
@@ -93,10 +185,20 @@ export async function listPublicProperties(params: ListPublicPropertiesParams) {
         null,
       );
       const bedrooms = shown.map((unit) => unit.bedrooms);
+      // When the freshest "still available" among the flats on offer was given.
+      const freshest = vacant.reduce<Date | null>(
+        (latest, unit) => (!latest || unit.availabilityConfirmedAt > latest ? unit.availabilityConfirmedAt : latest),
+        null,
+      );
       return {
         ...property,
+        landlord: publicLandlord(landlord.verification),
+        coverPhotoId: photos[0]?.id ?? null,
+        photoCount: propertyCounts.photos,
         unitCount: units.length,
         vacantUnitCount: vacant.length,
+        availabilityConfirmedAt: freshest,
+        availabilityConfirmedDaysAgo: freshest ? daysSince(freshest) : null,
         bedroomsMin: bedrooms.length ? Math.min(...bedrooms) : null,
         bedroomsMax: bedrooms.length ? Math.max(...bedrooms) : null,
         priceFrom: cheapest
@@ -115,6 +217,7 @@ export async function getPublicProperty(propertyId: string) {
     where: { id: propertyId, ...publiclyVisible },
     select: {
       ...publicPropertyFields,
+      photos: { orderBy: { position: "asc" }, select: { id: true, unitId: true } },
       units: {
         orderBy: { label: "asc" },
         select: {
@@ -125,6 +228,12 @@ export async function getPublicProperty(propertyId: string) {
           rentAmount: true,
           rentFrequency: true,
           description: true,
+          cautionDeposit: true,
+          agreementFee: true,
+          serviceCharge: true,
+          agencyFee: true,
+          availabilityConfirmedAt: true,
+          availableFrom: true,
           _count: { select: activeTenancyCount },
         },
       },
@@ -135,13 +244,62 @@ export async function getPublicProperty(propertyId: string) {
     throw new AppError(404, "Property not found", "NOT_FOUND");
   }
 
+  const { landlord, units, ...rest } = property;
   return {
-    ...property,
-    units: property.units.map(({ _count, ...unit }) => ({ ...unit, isVacant: _count.tenancies === 0 })),
+    ...rest,
+    landlord: publicLandlord(landlord.verification),
+    units: units.map(({ _count, cautionDeposit, agreementFee, serviceCharge, agencyFee, ...unit }) => {
+      const availability = unitAvailability({ _count, availabilityConfirmedAt: unit.availabilityConfirmedAt });
+      return {
+        ...unit,
+        availability,
+        // Kept for older callers: true only when the flat can be viewed now.
+        isVacant: availability === "AVAILABLE",
+        availabilityConfirmedDaysAgo: daysSince(unit.availabilityConfirmedAt),
+        ...pricing({ rentAmount: unit.rentAmount, cautionDeposit, agreementFee, serviceCharge, agencyFee }),
+      };
+    }),
   };
 }
 
-export async function createInspectionRequest(unitId: string, input: CreateInspectionRequestInput) {
+export async function createInspectionRequest(userId: string, unitId: string, input: CreateInspectionRequestInput) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { fullName: true, email: true } });
+  if (!user) {
+    throw new AppError(401, "Sign in to request a viewing", "UNAUTHENTICATED");
+  }
+
+  if (input.preferredDate && isBeforeToday(input.preferredDate)) {
+    throw new AppError(400, "Pick today or a later date", "VALIDATION_ERROR");
+  }
+
+  // Someone who keeps booking and not turning up is held back for a while.
+  const since = new Date(Date.now() - RESTRICT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const missed = await prisma.inspectionRequest.count({
+    where: { requesterId: userId, status: "NO_SHOW_VISITOR", updatedAt: { gte: since } },
+  });
+  if (missed >= RESTRICT_AFTER_MISSED) {
+    throw new AppError(
+      403,
+      `You have missed ${missed} viewings in the last ${RESTRICT_WINDOW_DAYS} days, so new requests are paused for now. Cancel viewings you cannot attend so landlords are not left waiting.`,
+      "VIEWING_RESTRICTED",
+    );
+  }
+
+  const open = await prisma.inspectionRequest.findMany({
+    where: { requesterId: userId, status: { in: ["PENDING", "SCHEDULED"] } },
+    select: { unitId: true },
+  });
+  if (open.some((request) => request.unitId === unitId)) {
+    throw new AppError(409, "You already have an open viewing request for this flat", "ALREADY_REQUESTED");
+  }
+  if (open.length >= MAX_ACTIVE_REQUESTS_PER_USER) {
+    throw new AppError(
+      409,
+      `You have ${MAX_ACTIVE_REQUESTS_PER_USER} open viewing requests. Finish or cancel one before asking for another.`,
+      "TOO_MANY_OPEN_REQUESTS",
+    );
+  }
+
   const unit = await prisma.unit.findFirst({
     where: { id: unitId, property: publiclyVisible },
     include: { _count: { select: activeTenancyCount } },
@@ -151,18 +309,33 @@ export async function createInspectionRequest(unitId: string, input: CreateInspe
     throw new AppError(404, "Unit not found", "NOT_FOUND");
   }
 
-  if (unit._count.tenancies > 0) {
+  const availability = unitAvailability(unit);
+  if (availability === "LET") {
     throw new AppError(409, "This flat is already let. Try another vacant flat.", "UNIT_OCCUPIED");
+  }
+  if (availability === "UNCONFIRMED") {
+    throw new AppError(
+      409,
+      "The landlord has not confirmed this flat is still available. Message them to check, or try another flat.",
+      "UNIT_UNCONFIRMED",
+    );
   }
 
   return prisma.inspectionRequest.create({
     data: {
       unitId: unit.id,
-      name: input.name,
-      email: input.email,
+      requesterId: userId,
+      // From the account, so the details cannot be made up. Shown to the landlord only
+      // once they accept.
+      name: user.fullName,
+      email: user.email,
       phone: input.phone,
       message: input.message,
       preferredDate: input.preferredDate,
+      // The rent as asked about, so a change afterwards can be pointed out.
+      rentAmount: unit.rentAmount,
+      rentFrequency: unit.rentFrequency,
     },
+    select: { id: true, unitId: true, status: true, preferredDate: true, createdAt: true },
   });
 }

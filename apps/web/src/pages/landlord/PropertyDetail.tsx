@@ -5,20 +5,24 @@ import {
   createUnit,
   updateUnit,
   deleteUnit,
+  confirmUnit,
+  confirmAllUnits,
   updateProperty,
   deleteProperty,
   type Property,
   type Unit,
   type UnitInput,
 } from "../../features/properties/api";
+import PhotoManager from "../../features/photos/PhotoManager";
 import { parseApiError } from "../../lib/errors";
 import { formatRent } from "../../lib/money";
 import { PlaceMap } from "../../features/maps/Maps";
 import { LocationPicker } from "../../features/maps/LocationTools";
 import { hasLocation, type LatLng } from "../../features/maps/geo";
 
-const inputClass = "rounded-lg border border-mist px-3 py-2 font-sans text-ink";
-const labelClass = "flex flex-col gap-1 text-sm font-bold text-ink";
+// min-w-0 lets a field shrink below its default width, so two side by side fit a phone.
+const inputClass = "w-full min-w-0 rounded-lg border border-mist px-3 py-2 font-sans text-ink";
+const labelClass = "flex min-w-0 flex-col gap-1 text-sm font-bold text-ink";
 
 const frequencyLabels: Record<string, string> = {
   MONTHLY: "Monthly",
@@ -43,8 +47,28 @@ function UnitForm({
   const [rentAmount, setRentAmount] = useState(initial ? String(Number(initial.rentAmount)) : "");
   const [rentFrequency, setRentFrequency] = useState(initial?.rentFrequency ?? "ANNUAL");
   const [description, setDescription] = useState(initial?.description ?? "");
+  // Fees stay as text so a blank box means "not stated" and 0 means "no such fee".
+  const feeText = (value: string | null | undefined) => (value == null ? "" : String(Number(value)));
+  const [cautionDeposit, setCautionDeposit] = useState(feeText(initial?.cautionDeposit));
+  const [agreementFee, setAgreementFee] = useState(feeText(initial?.agreementFee));
+  const [serviceCharge, setServiceCharge] = useState(feeText(initial?.serviceCharge));
+  const [agencyFee, setAgencyFee] = useState(feeText(initial?.agencyFee));
+  const [availableFrom, setAvailableFrom] = useState(initial?.availableFrom?.slice(0, 10) ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const fee = (text: string) => (text.trim() === "" ? null : Number(text));
+  const rentNumber = Number(rentAmount) || 0;
+  const statedFees = [cautionDeposit, agreementFee, serviceCharge, agencyFee].reduce(
+    (sum, text) => sum + (fee(text) ?? 0),
+    0,
+  );
+  const feeInputs = [
+    ["Caution deposit", cautionDeposit, setCautionDeposit],
+    ["Agreement fee", agreementFee, setAgreementFee],
+    ["Service charge", serviceCharge, setServiceCharge],
+    ["Agency fee", agencyFee, setAgencyFee],
+  ] as const;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -59,6 +83,11 @@ function UnitForm({
         rentFrequency,
         // An empty string (not undefined) so clearing the field clears it.
         description,
+        cautionDeposit: fee(cautionDeposit),
+        agreementFee: fee(agreementFee),
+        serviceCharge: fee(serviceCharge),
+        agencyFee: fee(agencyFee),
+        availableFrom: availableFrom || null,
       });
     } catch (err) {
       setFormError(parseApiError(err).message);
@@ -121,6 +150,37 @@ function UnitForm({
       <label className={labelClass}>
         Description <span className="font-normal text-ink/60">(optional)</span>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputClass} />
+      </label>
+      <fieldset className="flex flex-col gap-3 rounded-lg border border-mist p-3">
+        <legend className="px-1 text-sm font-bold text-ink">Other costs to move in</legend>
+        <p className="text-sm text-ink/70">
+          Tenants see these on your listing before they ask. Enter 0 if there is no such fee. Leave a box blank if you
+          have not decided, and tenants will see "Ask landlord".
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {feeInputs.map(([text, value, setValue]) => (
+            <label key={text} className={labelClass}>
+              {text} (NGN)
+              <input
+                type="number"
+                min={0}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="Ask landlord"
+                className={inputClass}
+              />
+            </label>
+          ))}
+        </div>
+        {rentNumber > 0 && (
+          <p className="text-sm font-bold text-night-blue">
+            Total to move in: NGN {(rentNumber + statedFees).toLocaleString()}
+          </p>
+        )}
+      </fieldset>
+      <label className={labelClass}>
+        Available from <span className="font-normal text-ink/60">(optional, if it is let now)</span>
+        <input type="date" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} className={inputClass} />
       </label>
       {initial && (
         <p className="text-sm text-ink/60">
@@ -239,6 +299,7 @@ export default function PropertyDetail() {
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function load() {
@@ -269,6 +330,22 @@ export default function PropertyDetail() {
     } catch (err) {
       setActionError(parseApiError(err).message);
       setDeletingId(null);
+    }
+  }
+
+  // "Still available": vouches for one flat, or for all of them at once.
+  async function handleConfirm(unit?: Unit) {
+    if (!property) return;
+    setConfirmingId(unit?.id ?? "all");
+    setActionError(null);
+    try {
+      if (unit) await confirmUnit(property.id, unit.id);
+      else await confirmAllUnits(property.id);
+      await load();
+    } catch (err) {
+      setActionError(parseApiError(err).message);
+    } finally {
+      setConfirmingId(null);
     }
   }
 
@@ -367,6 +444,8 @@ export default function PropertyDetail() {
 
       {actionError && <p className="mt-4 text-sm font-bold text-red-600">{actionError}</p>}
 
+      <PhotoManager propertyId={property.id} units={property.units ?? []} />
+
       <div className="mt-8 flex items-center justify-between">
         <h2 className="font-display text-lg font-extrabold text-night-blue">Flats</h2>
         <button
@@ -389,6 +468,21 @@ export default function PropertyDetail() {
         />
       )}
 
+      {property.units?.some((unit) => !unit.occupied) && (
+        <p className="mt-2 max-w-xl text-sm text-ink">
+          Visitors see when you last confirmed a flat is available. After 30 days without a tap it is hidden from
+          viewing requests, so people are not sent to a flat that is already let.{" "}
+          <button
+            type="button"
+            disabled={confirmingId !== null}
+            onClick={() => void handleConfirm()}
+            className="font-bold text-trust-blue hover:underline disabled:opacity-60"
+          >
+            {confirmingId === "all" ? "Saving..." : "Confirm every flat is still available"}
+          </button>
+        </p>
+      )}
+
       <ul className="mt-4 flex flex-col gap-3">
         {property.units?.map((unit) => (
           <li key={unit.id} className="rounded-xl bg-white p-4 shadow-sm">
@@ -399,6 +493,41 @@ export default function PropertyDetail() {
                   {unit.bedrooms} bed{unit.bathrooms != null ? ` - ${unit.bathrooms} bath` : ""} -{" "}
                   {formatRent(unit.rentAmount, unit.rentFrequency)}
                 </p>
+                {unit.occupied ? (
+                  <p className="mt-1 text-sm font-bold text-ink/60">Let</p>
+                ) : (
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                        unit.availability.state === "CONFIRMED"
+                          ? "bg-direct-green/10 text-green-700"
+                          : unit.availability.state === "DUE"
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-red-50 text-red-600"
+                      }`}
+                    >
+                      {unit.availability.state === "STALE"
+                        ? "Hidden from viewings: not confirmed"
+                        : unit.availability.state === "DUE"
+                          ? "Please confirm"
+                          : "Available"}
+                    </span>
+                    <span className="text-xs text-ink/60">
+                      Confirmed{" "}
+                      {unit.availability.daysSinceConfirmed === 0
+                        ? "today"
+                        : `${unit.availability.daysSinceConfirmed} day${unit.availability.daysSinceConfirmed === 1 ? "" : "s"} ago`}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={confirmingId !== null}
+                      onClick={() => void handleConfirm(unit)}
+                      className="text-sm font-bold text-trust-blue hover:underline disabled:opacity-60"
+                    >
+                      {confirmingId === unit.id ? "Saving..." : "Still available"}
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex gap-4">
                 <button

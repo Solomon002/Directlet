@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { prisma } from "../../lib/prisma";
+import { FILE_CONTENT_TYPES, detectContentType } from "../../lib/fileTypes";
 import { AppError } from "../../utils/AppError";
 import type { CreatePaymentInput } from "@directlet/shared";
 
@@ -163,15 +164,7 @@ export async function rejectPayment(landlordId: string, paymentId: string, rejec
 
 const MAX_PROOF_BYTES = 2 * 1024 * 1024;
 
-// Trust the file's first bytes, not the Content-Type the browser sent.
-const PROOF_SIGNATURES: { contentType: string; matches: (data: Buffer) => boolean }[] = [
-  { contentType: "image/jpeg", matches: (d) => d[0] === 0xff && d[1] === 0xd8 && d[2] === 0xff },
-  { contentType: "image/png", matches: (d) => d.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
-  { contentType: "image/webp", matches: (d) => d.toString("ascii", 0, 4) === "RIFF" && d.toString("ascii", 8, 12) === "WEBP" },
-  { contentType: "application/pdf", matches: (d) => d.toString("ascii", 0, 5) === "%PDF-" },
-];
-
-export const PROOF_CONTENT_TYPES = PROOF_SIGNATURES.map((signature) => signature.contentType);
+export const PROOF_CONTENT_TYPES = FILE_CONTENT_TYPES;
 export const PROOF_SIZE_LIMIT = MAX_PROOF_BYTES;
 
 export async function attachProof(tenantId: string, paymentId: string, data: Buffer) {
@@ -183,7 +176,7 @@ export async function attachProof(tenantId: string, paymentId: string, data: Buf
     throw new AppError(409, "Proof can only be added while the payment is pending", "PAYMENT_ALREADY_REVIEWED");
   }
 
-  const contentType = PROOF_SIGNATURES.find((signature) => signature.matches(data))?.contentType;
+  const contentType = detectContentType(data);
   if (!contentType) {
     throw new AppError(415, "Upload a JPG, PNG, WebP image or a PDF", "UNSUPPORTED_FILE_TYPE");
   }

@@ -8,6 +8,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import Home from "../pages/public/Home";
 import Browse from "../pages/public/Browse";
 import CompoundPage from "../pages/public/CompoundPage";
+import Viewings from "../pages/public/Viewings";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import AcceptInvite from "../pages/auth/AcceptInvite";
@@ -24,6 +25,9 @@ import AdminUsers from "../pages/admin/Users";
 import AdminUserDetail from "../pages/admin/UserDetail";
 import AdminProperties from "../pages/admin/Properties";
 import AdminActivity from "../pages/admin/Activity";
+import AdminVerifications from "../pages/admin/Verifications";
+import AdminVerificationDetail from "../pages/admin/VerificationDetail";
+import LandlordVerification from "../pages/landlord/Verification";
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +43,10 @@ export const router = createBrowserRouter([
           { path: "/invite/:token", element: <AcceptInvite /> },
           { path: "/compounds", element: <Browse /> },
           { path: "/compounds/:propertyId", element: <CompoundPage /> },
+          {
+            element: <ProtectedRoute allowedRoles={["HUNTER", "TENANT"]} />,
+            children: [{ path: "/viewings", element: <Viewings /> }],
+          },
           {
             element: <ProtectedRoute allowedRoles={["HUNTER"]} />,
             children: [
@@ -61,6 +69,7 @@ export const router = createBrowserRouter([
               { path: "tenancies", element: <Tenancies /> },
               { path: "tenancies/:tenancyId", element: <TenancyDetail /> },
               { path: "inspections", element: <Inspections /> },
+              { path: "verification", element: <LandlordVerification /> },
               { path: "messages", element: <Inbox basePath="/landlord/messages" /> },
               { path: "messages/:conversationId", element: <Inbox basePath="/landlord/messages" /> },
             ],
@@ -92,6 +101,8 @@ export const router = createBrowserRouter([
               { path: "users", element: <AdminUsers /> },
               { path: "users/:userId", element: <AdminUserDetail /> },
               { path: "properties", element: <AdminProperties /> },
+              { path: "verifications", element: <AdminVerifications /> },
+              { path: "verifications/:id", element: <AdminVerificationDetail /> },
               { path: "activity", element: <AdminActivity /> },
             ],
           },

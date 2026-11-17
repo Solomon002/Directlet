@@ -9,5 +9,8 @@ export const unitsRouter = Router({ mergeParams: true });
 
 unitsRouter.get("/", asyncHandler(unitController.list));
 unitsRouter.post("/", validate(createUnitSchema), asyncHandler(unitController.create));
-unitsRouter.patch("/:unitId", validate(updateUnitSchema), asyncHandler(unitController.update));
+// Before "/:unitId" routes so "confirm-all" is not read as a unit id.
+unitsRouter.post("/confirm-all", asyncHandler(unitController.confirmAll));
+unitsRouter.post("/:unitId/confirm", asyncHandler(unitController.confirm));
+unitsRouter.patch("/:unitId",validate(updateUnitSchema), asyncHandler(unitController.update));
 unitsRouter.delete("/:unitId", asyncHandler(unitController.remove));

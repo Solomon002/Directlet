@@ -4,6 +4,7 @@ const items: NavItem[] = [
   { to: "/admin", label: "Overview", icon: "chart", end: true },
   { to: "/admin/users", label: "Users", icon: "users" },
   { to: "/admin/properties", label: "Properties", icon: "building" },
+  { to: "/admin/verifications", label: "Verify", icon: "shield" },
   { to: "/admin/activity", label: "Activity", icon: "list" },
 ];
 

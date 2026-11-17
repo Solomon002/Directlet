@@ -7,6 +7,7 @@ import { geocodeRateLimiter } from "../../middleware/rateLimit";
 import { asyncHandler } from "../../utils/asyncHandler";
 import * as propertyController from "./controller";
 import { unitsRouter } from "../units/routes";
+import { photosRouter } from "../photos/routes";
 
 export const propertiesRouter = Router();
 
@@ -25,3 +26,4 @@ propertiesRouter.patch(
 propertiesRouter.delete("/:propertyId", asyncHandler(propertyController.remove));
 
 propertiesRouter.use("/:propertyId/units", unitsRouter);
+propertiesRouter.use("/:propertyId/photos", photosRouter);

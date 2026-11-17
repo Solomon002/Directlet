@@ -29,6 +29,20 @@ export async function update(req: Request, res: Response) {
   res.status(200).json({ unit });
 }
 
+export async function confirm(req: Request, res: Response) {
+  const unit = await unitService.confirmAvailability(
+    landlordId(req),
+    req.params.propertyId as string,
+    req.params.unitId as string,
+  );
+  res.status(200).json({ unit });
+}
+
+export async function confirmAll(req: Request, res: Response) {
+  const result = await unitService.confirmAllAvailability(landlordId(req), req.params.propertyId as string);
+  res.status(200).json(result);
+}
+
 export async function remove(req: Request, res: Response) {
   await unitService.deleteUnit(
     landlordId(req),

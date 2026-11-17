@@ -14,3 +14,4 @@ export * from "./schemas/payment";
 export * from "./schemas/complaint";
 export * from "./schemas/inspection";
 export * from "./schemas/message";
+export * from "./schemas/verification";

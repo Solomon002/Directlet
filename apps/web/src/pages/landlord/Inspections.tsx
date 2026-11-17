@@ -4,10 +4,15 @@ import {
   scheduleInspection,
   declineInspection,
   completeInspection,
+  markVisitorNoShow,
   convertInspection,
+  statusLabels,
   type InspectionRequest,
 } from "../../features/inspections/api";
 import { parseApiError } from "../../lib/errors";
+import { formatDay } from "../public/Viewings";
+
+const today = () => new Date().toISOString().slice(0, 10);
 
 export default function Inspections() {
   const [inspections, setInspections] = useState<InspectionRequest[]>([]);
@@ -61,6 +66,20 @@ export default function Inspections() {
     setActionError(null);
     try {
       await declineInspection(id, declineNoteDraft[id] || undefined);
+      await loadData();
+    } catch (err) {
+      setActionError(parseApiError(err).message);
+    } finally {
+      setActingOnId(null);
+    }
+  }
+
+  async function handleNoShow(id: string) {
+    if (!window.confirm("Mark this visitor as not having shown up? It is recorded against their account.")) return;
+    setActingOnId(id);
+    setActionError(null);
+    try {
+      await markVisitorNoShow(id);
       await loadData();
     } catch (err) {
       setActionError(parseApiError(err).message);
@@ -149,21 +168,35 @@ export default function Inspections() {
                         : "text-sm font-bold text-ink/60"
                 }
               >
-                {inspection.status}
+                {statusLabels[inspection.status]}
               </span>
             </div>
-            <p className="text-sm text-ink">
-              {inspection.email} - {inspection.phone}
-            </p>
-            {inspection.message && <p className="mt-1 text-sm text-ink">{inspection.message}</p>}
-            {inspection.preferredDate && (
-              <p className="mt-1 text-xs text-ink/60">
-                Preferred date: {new Date(inspection.preferredDate).toDateString()}
+            {inspection.contactHidden ? (
+              <p className="text-sm text-ink/70">
+                Phone and email are shared once you accept by choosing a date. You can still message them from Messages.
+              </p>
+            ) : (
+              <p className="text-sm text-ink">
+                {inspection.email} - {inspection.phone}
               </p>
             )}
-            {inspection.scheduledFor && (
+            {inspection.visitorRecord && (
+              <p
+                className={`mt-1 text-xs ${inspection.visitorRecord.missed > 0 ? "font-bold text-red-600" : "text-ink/60"}`}
+              >
+                {inspection.visitorRecord.attended + inspection.visitorRecord.missed === 0
+                  ? "New to viewings on DirectLet"
+                  : `Past viewings: came to ${inspection.visitorRecord.attended}, missed ${inspection.visitorRecord.missed}`}
+              </p>
+            )}
+            {inspection.message && <p className="mt-1 text-sm text-ink">{inspection.message}</p>}
+            {inspection.preferredDate && (
+              <p className="mt-1 text-xs text-ink/60">Preferred date: {formatDay(inspection.preferredDate)}</p>
+            )}
+            {inspection.scheduledFor && inspection.status === "SCHEDULED" && (
               <p className="mt-1 text-sm font-bold text-trust-blue">
-                Scheduled for {new Date(inspection.scheduledFor).toDateString()}
+                Viewing on {formatDay(inspection.scheduledFor)}
+                {inspection.rescheduleCount ? ` (moved ${inspection.rescheduleCount}x)` : ""}
               </p>
             )}
             {inspection.landlordNote && (
@@ -172,36 +205,48 @@ export default function Inspections() {
 
             {(inspection.status === "PENDING" || inspection.status === "SCHEDULED") && (
               <div className="mt-3 flex flex-col gap-2">
-                {inspection.status === "PENDING" && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="date"
-                      value={scheduleDateDraft[inspection.id] ?? ""}
-                      onChange={(e) =>
-                        setScheduleDateDraft((prev) => ({ ...prev, [inspection.id]: e.target.value }))
-                      }
-                      className="rounded-lg border border-mist px-3 py-2 font-sans text-sm text-ink"
-                    />
-                    <button
-                      type="button"
-                      disabled={actingOnId === inspection.id || !scheduleDateDraft[inspection.id]}
-                      onClick={() => void handleSchedule(inspection.id)}
-                      className="rounded-xl bg-trust-blue px-4 py-2 font-display font-extrabold text-white disabled:opacity-60"
-                    >
-                      Schedule
-                    </button>
-                  </div>
-                )}
-
-                {inspection.status === "SCHEDULED" && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    aria-label={inspection.status === "PENDING" ? "Viewing date" : "New viewing date"}
+                    min={today()}
+                    value={scheduleDateDraft[inspection.id] ?? ""}
+                    onChange={(e) =>
+                      setScheduleDateDraft((prev) => ({ ...prev, [inspection.id]: e.target.value }))
+                    }
+                    className="rounded-lg border border-mist px-3 py-2 font-sans text-sm text-ink"
+                  />
                   <button
                     type="button"
-                    disabled={actingOnId === inspection.id}
-                    onClick={() => void handleComplete(inspection.id)}
-                    className="self-start rounded-xl bg-direct-green px-4 py-2 font-display font-extrabold text-white disabled:opacity-60"
+                    disabled={actingOnId === inspection.id || !scheduleDateDraft[inspection.id]}
+                    onClick={() => void handleSchedule(inspection.id)}
+                    className="rounded-xl bg-trust-blue px-4 py-2 font-display font-extrabold text-white disabled:opacity-60"
                   >
-                    Mark complete
+                    {inspection.status === "PENDING" ? "Accept and set date" : "Move date"}
                   </button>
+                </div>
+
+                {inspection.status === "SCHEDULED" && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={actingOnId === inspection.id}
+                      onClick={() => void handleComplete(inspection.id)}
+                      className="rounded-xl bg-direct-green px-4 py-2 font-display font-extrabold text-white disabled:opacity-60"
+                    >
+                      Mark complete
+                    </button>
+                    {inspection.canMarkNoShow && (
+                      <button
+                        type="button"
+                        disabled={actingOnId === inspection.id}
+                        onClick={() => void handleNoShow(inspection.id)}
+                        className="rounded-xl border-2 border-red-600 px-4 py-2 font-display font-extrabold text-red-600 disabled:opacity-60"
+                      >
+                        They did not show up
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -225,7 +270,7 @@ export default function Inspections() {
               </div>
             )}
 
-            {inspection.status !== "CONVERTED" && (
+            {!["CONVERTED", "CANCELLED", "NO_SHOW_VISITOR", "NO_SHOW_LANDLORD"].includes(inspection.status) && (
               <div className="mt-3">
                 <button
                   type="button"

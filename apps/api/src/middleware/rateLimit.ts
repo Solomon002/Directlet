@@ -79,6 +79,32 @@ export const messageRateLimiter = rateLimit({
   message: tooMany("You are sending messages too quickly. Wait a moment."),
 });
 
+// Verification documents are big and kept in the database, so uploads are slowed down.
+export const documentUploadRateLimiter = rateLimit({
+  ...base,
+  windowMs: 15 * MINUTE,
+  limit: 20,
+  keyGenerator: userKey,
+  message: tooMany("Too many uploads. Wait a few minutes and try again."),
+});
+
+// A landlord adding a whole property's pictures at once is normal, so this is looser.
+export const photoUploadRateLimiter = rateLimit({
+  ...base,
+  windowMs: 15 * MINUTE,
+  limit: 60,
+  keyGenerator: userKey,
+  message: tooMany("Too many uploads. Wait a few minutes and try again."),
+});
+
+export const viewingRequestRateLimiter = rateLimit({
+  ...base,
+  windowMs: 60 * MINUTE,
+  limit: 15,
+  keyGenerator: userKey,
+  message: tooMany("You are sending viewing requests too quickly. Try again later."),
+});
+
 export const refreshRateLimiter = rateLimit({
   ...base,
   windowMs: 15 * MINUTE,

@@ -10,6 +10,8 @@ import {
   type DashboardTotals,
   type Reminder,
 } from "../../features/dashboard/api";
+import { listMyProperties } from "../../features/properties/api";
+import { getMyVerification, type Verification } from "../../features/verification/api";
 import { parseApiError } from "../../lib/errors";
 
 function naira(amount: string) {
@@ -20,6 +22,8 @@ export default function Dashboard() {
   const [totals, setTotals] = useState<DashboardTotals | null>(null);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [verification, setVerification] = useState<Verification | null>(null);
+  const [needsConfirmation, setNeedsConfirmation] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -34,6 +38,15 @@ export default function Dashboard() {
         setTotals(myTotals);
         setReminders(myReminders);
         setActivity(myActivity);
+        // The trust prompts are extras: if they fail to load, the dashboard still works.
+        const [myVerification, myProperties] = await Promise.all([
+          getMyVerification().catch(() => null),
+          listMyProperties().catch(() => []),
+        ]);
+        setVerification(myVerification);
+        setNeedsConfirmation(
+          myProperties.reduce((sum, property) => sum + (property.needsConfirmation ?? 0) + (property.unconfirmed ?? 0), 0),
+        );
       } catch (err) {
         setLoadError(parseApiError(err).message);
       } finally {
@@ -82,6 +95,50 @@ export default function Dashboard() {
   return (
     <div className="p-4 sm:p-8">
       <h1 className="font-display text-2xl font-extrabold text-night-blue">Landlord dashboard</h1>
+
+      {(verification?.status !== "VERIFIED" || needsConfirmation > 0) && (
+        <div className="mt-4 flex flex-col gap-3">
+          {verification?.status !== "VERIFIED" && (
+            <Link
+              to="/landlord/verification"
+              className="rounded-xl border-l-4 border-trust-blue bg-white p-4 shadow-sm hover:shadow"
+            >
+              <p className="font-display font-extrabold text-night-blue">
+                {!verification
+                  ? "Get verified"
+                  : verification.status === "REJECTED"
+                    ? "Your verification needs attention"
+                    : verification.missingDocuments.length > 0
+                      ? "Finish your verification"
+                      : "Verification under review"}
+              </p>
+              <p className="mt-0.5 text-sm text-ink">
+                {!verification
+                  ? "Verified landlords get a badge and are shown first. It takes about five minutes."
+                  : verification.status === "REJECTED"
+                    ? (verification.rejectionReason ?? "Tap to see what to fix.")
+                    : verification.missingDocuments.length > 0
+                      ? "Add your documents so we can review it."
+                      : "We will check your documents and update you here."}
+              </p>
+            </Link>
+          )}
+          {needsConfirmation > 0 && (
+            <Link
+              to="/landlord/properties"
+              className="rounded-xl border-l-4 border-amber-500 bg-white p-4 shadow-sm hover:shadow"
+            >
+              <p className="font-display font-extrabold text-night-blue">
+                {needsConfirmation} flat{needsConfirmation === 1 ? "" : "s"} to confirm
+              </p>
+              <p className="mt-0.5 text-sm text-ink">
+                Tap "Still available" on each one. Flats you have not confirmed for 30 days are hidden from viewing
+                requests.
+              </p>
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {moneyCards.map((card) => (

@@ -18,6 +18,7 @@ export async function getProperty(req: Request, res: Response) {
 
 export async function createInspectionRequest(req: Request, res: Response) {
   const inspectionRequest = await publicService.createInspectionRequest(
+    req.user!.sub,
     req.params.unitId as string,
     req.body,
   );

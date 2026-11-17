@@ -132,6 +132,25 @@ export default function Overview() {
         </div>
       </Section>
 
+      <Section
+        title="Landlord verification"
+        action={
+          <Link to="/admin/verifications" className="text-sm font-bold text-trust-blue hover:underline">
+            Review applications
+          </Link>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat
+            label="To review"
+            value={data.verifications?.PENDING ?? 0}
+            tone={data.verifications?.PENDING ? "alert" : undefined}
+          />
+          <Stat label="Verified" value={data.verifications?.VERIFIED ?? 0} tone="good" />
+          <Stat label="Rejected" value={data.verifications?.REJECTED ?? 0} />
+        </div>
+      </Section>
+
       <Section title="Rent">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Rent recorded" value={naira(money.confirmedTotal)} note={`${money.confirmedCount} confirmed payments`} tone="good" />

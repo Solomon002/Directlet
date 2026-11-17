@@ -140,7 +140,10 @@ export async function getOverview() {
 
   const unpaid = (chargeTotals._sum.amount ?? new Prisma.Decimal(0)).minus(chargeTotals._sum.amountPaid ?? 0);
 
+  const verificationRows = await prisma.landlordVerification.groupBy({ by: ["status"], _count: true });
+
   return {
+    verifications: Object.fromEntries(verificationRows.map((row) => [row.status, row._count])),
     users: {
       byRole: countByRole(usersByRole),
       suspended: suspendedUsers,

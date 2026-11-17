@@ -1,10 +1,10 @@
 import { z } from "zod";
 
+// The person asking is signed in, so their name and email come from their account.
+// Only what the account does not have is asked for.
 export const createInspectionRequestSchema = z.object({
-  name: z.string().min(2, "name is too short"),
-  email: z.email(),
-  phone: z.string().min(7, "phone is too short"),
-  message: z.string().optional(),
+  phone: z.string().trim().min(7, "phone is too short").max(20, "phone is too long"),
+  message: z.string().trim().max(500, "keep the message under 500 characters").optional(),
   preferredDate: z.coerce.date().optional(),
 });
 

@@ -37,6 +37,14 @@ export async function complete(req: Request, res: Response) {
   res.status(200).json({ inspectionRequest });
 }
 
+export async function noShow(req: Request, res: Response) {
+  const inspectionRequest = await inspectionService.markVisitorNoShow(
+    landlordId(req),
+    req.params.inspectionId as string,
+  );
+  res.status(200).json({ inspectionRequest });
+}
+
 export async function convert(req: Request, res: Response) {
   const { tenancy, tenant, inviteToken } = await inspectionService.convertToTenancy(
     landlordId(req),

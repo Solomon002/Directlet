@@ -11,7 +11,8 @@ export type IconName =
   | "alert"
   | "chart"
   | "users"
-  | "list";
+  | "list"
+  | "shield";
 
 const PATHS: Record<IconName, string> = {
   home: "M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10M10 19.5v-5h4v5",
@@ -25,6 +26,7 @@ const PATHS: Record<IconName, string> = {
   chart: "M4 20V11M10 20V4M16 20v-6M2 20h20",
   users: "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16.5 11a3 3 0 000-6M21 20c0-2.6-1.6-4.6-4-5.6",
   list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
+  shield: "M12 3 4.5 6v5.5c0 4.6 3 8 7.5 9.5 4.5-1.5 7.5-4.9 7.5-9.5V6L12 3zM9 12l2.2 2.2L15.5 10",
 };
 
 export function NavIcon({ name, className = "h-6 w-6" }: { name: IconName; className?: string }) {

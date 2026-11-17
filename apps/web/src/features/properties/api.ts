@@ -9,6 +9,17 @@ export type Unit = {
   rentAmount: string;
   rentFrequency: string;
   description: string | null;
+  // One-off costs on top of the rent. null = not stated yet.
+  cautionDeposit: string | null;
+  agreementFee: string | null;
+  serviceCharge: string | null;
+  agencyFee: string | null;
+  availableFrom: string | null;
+  availabilityConfirmedAt: string;
+  // CONFIRMED: recent. DUE: asks the landlord to confirm. STALE: hidden from viewings.
+  availability: { state: "CONFIRMED" | "DUE" | "STALE"; daysSinceConfirmed: number };
+  // Whether a tenant lives there now (single-property endpoint only).
+  occupied?: boolean;
 };
 
 export type Property = {
@@ -25,6 +36,9 @@ export type Property = {
   hiddenByAdminAt?: string | null;
   hiddenByAdminReason?: string | null;
   _count?: { units: number };
+  // List endpoint only: vacant flats whose "still available" is due or has lapsed.
+  needsConfirmation?: number;
+  unconfirmed?: number;
   units?: Unit[];
 };
 
@@ -77,7 +91,50 @@ export type UnitInput = {
   rentAmount: number;
   rentFrequency?: string;
   description?: string;
+  // null (or blank) = not stated; 0 = no such fee.
+  cautionDeposit?: number | null;
+  agreementFee?: number | null;
+  serviceCharge?: number | null;
+  agencyFee?: number | null;
+  availableFrom?: string | null;
 };
+
+export type PropertyPhoto = {
+  id: string;
+  unitId: string | null;
+  position: number;
+  sizeBytes: number;
+  createdAt: string;
+};
+
+export async function listPhotos(propertyId: string) {
+  const res = await api.get<{ photos: PropertyPhoto[] }>(`/properties/${propertyId}/photos`);
+  return res.data.photos;
+}
+
+export async function uploadPhoto(propertyId: string, file: Blob, unitId?: string) {
+  const res = await api.post<{ photo: PropertyPhoto }>(`/properties/${propertyId}/photos`, file, {
+    params: { unitId },
+    headers: { "Content-Type": file.type },
+  });
+  return res.data.photo;
+}
+
+export async function deletePhoto(propertyId: string, photoId: string) {
+  await api.delete(`/properties/${propertyId}/photos/${photoId}`);
+}
+
+export async function makeCoverPhoto(propertyId: string, photoId: string) {
+  await api.post(`/properties/${propertyId}/photos/${photoId}/cover`);
+}
+
+export async function confirmUnit(propertyId: string, unitId: string) {
+  await api.post(`/properties/${propertyId}/units/${unitId}/confirm`);
+}
+
+export async function confirmAllUnits(propertyId: string) {
+  await api.post(`/properties/${propertyId}/units/confirm-all`);
+}
 
 export async function updateProperty(propertyId: string, input: Partial<PropertyInput>) {
   const res = await api.patch<{ property: Property }>(`/properties/${propertyId}`, input);
@@ -97,17 +154,7 @@ export async function deleteUnit(propertyId: string, unitId: string) {
   await api.delete(`/properties/${propertyId}/units/${unitId}`);
 }
 
-export async function createUnit(
-  propertyId: string,
-  input: {
-    label: string;
-    bedrooms: number;
-    bathrooms?: number;
-    rentAmount: number;
-    rentFrequency?: string;
-    description?: string;
-  },
-) {
+export async function createUnit(propertyId: string, input: UnitInput) {
   const res = await api.post<{ unit: Unit }>(`/properties/${propertyId}/units`, input);
   return res.data.unit;
 }

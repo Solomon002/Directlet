@@ -106,10 +106,15 @@ export default function PublicHeader() {
             </>
           )}
           {user?.role === "HUNTER" && (
-            <Link to="/messages" className="rounded-lg px-3 py-2 text-sm font-bold text-ink/80 hover:bg-mist hover:text-trust-blue">
-              Messages
-              <UnreadBadge count={unread} />
-            </Link>
+            <>
+              <Link to="/viewings" className="rounded-lg px-3 py-2 text-sm font-bold text-ink/80 hover:bg-mist hover:text-trust-blue">
+                My viewings
+              </Link>
+              <Link to="/messages" className="rounded-lg px-3 py-2 text-sm font-bold text-ink/80 hover:bg-mist hover:text-trust-blue">
+                Messages
+                <UnreadBadge count={unread} />
+              </Link>
+            </>
           )}
           {user && user.role !== "HUNTER" && (
             <Link to={homePathFor(user.role)} className="rounded-xl bg-trust-blue px-4 py-2 font-display text-sm font-extrabold text-white shadow-sm hover:bg-night-blue">
@@ -160,10 +165,15 @@ export default function PublicHeader() {
               </Link>
             ))}
             {user?.role === "HUNTER" && (
-              <Link to="/messages" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-3 text-lg font-bold text-night-blue hover:bg-mist">
-                Messages
-                <UnreadBadge count={unread} />
-              </Link>
+              <>
+                <Link to="/viewings" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-3 text-lg font-bold text-night-blue hover:bg-mist">
+                  My viewings
+                </Link>
+                <Link to="/messages" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-3 text-lg font-bold text-night-blue hover:bg-mist">
+                  Messages
+                  <UnreadBadge count={unread} />
+                </Link>
+              </>
             )}
             {canPrompt && (
               <button

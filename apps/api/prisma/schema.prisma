@@ -62,6 +62,107 @@ model User {
   conversationsAsLandlord    Conversation[] @relation("ConversationLandlord")
   conversationsAsParticipant Conversation[] @relation("ConversationParticipant")
   messagesSent               Message[]
+  inspectionRequests         InspectionRequest[] @relation("InspectionRequester")
+  verification               LandlordVerification? @relation("VerificationOwner")
+  verificationsReviewed      LandlordVerification[] @relation("VerificationReviewer")
+}
+
+// ---------- Listing photos ----------
+
+// A picture of a property, or of one flat in it (unitId). position 0 is the cover.
+// Kept in the database like verification documents, so it needs no extra service;
+// a photo is served by its own id and never changes, so browsers and the CDN cache it.
+model PropertyPhoto {
+  id          String   @id @default(uuid()) @db.Uuid
+  propertyId  String   @db.Uuid
+  unitId      String?  @db.Uuid
+  position    Int
+  contentType String
+  sizeBytes   Int
+  // SHA-256 of the file. The same file cannot be used on another landlord's listing,
+  // which catches the plainest case of stolen photos.
+  contentHash String
+  data        Bytes
+  createdAt   DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit     Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, position])
+  @@index([contentHash])
+}
+
+// ---------- Landlord verification ----------
+
+// There is no row for a landlord who has not applied: that means "unverified".
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum LandlordType {
+  INDIVIDUAL
+  COMPANY
+}
+
+// The prefix of a CAC (Corporate Affairs Commission) registration number:
+// RC a company, BN a registered business name, IT incorporated trustees.
+enum CacType {
+  RC
+  BN
+  IT
+}
+
+enum VerificationDocKind {
+  ID
+  OWNERSHIP
+  CAC_CERTIFICATE
+}
+
+// One application per landlord. An admin checks the documents (and, for a company,
+// the CAC number on search.cac.gov.ng) and approves or rejects it.
+model LandlordVerification {
+  id              String             @id @default(uuid()) @db.Uuid
+  userId          String             @unique @db.Uuid
+  status          VerificationStatus @default(PENDING)
+  landlordType    LandlordType
+  cacType         CacType?
+  cacNumber       String?
+  // The name as the landlord says it is registered; the admin compares it with CAC.
+  registeredName  String?
+  submittedAt     DateTime           @default(now())
+  reviewedAt      DateTime?
+  // Set only while the status is VERIFIED. The marketplace sorts on it so verified
+  // landlords come first (reviewedAt cannot do that, since a rejection sets it too).
+  verifiedAt      DateTime?
+  reviewedById    String?            @db.Uuid
+  rejectionReason String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user      User                   @relation("VerificationOwner", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer  User?                  @relation("VerificationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  documents VerificationDocument[]
+
+  @@index([status])
+}
+
+// Kept in the database, like payment proofs, so it has the same backups and access
+// checks. Only the landlord and admins can read one. Size is capped at upload time.
+model VerificationDocument {
+  id             String              @id @default(uuid()) @db.Uuid
+  verificationId String              @db.Uuid
+  kind           VerificationDocKind
+  fileName       String
+  contentType    String
+  sizeBytes      Int
+  data           Bytes
+  createdAt      DateTime            @default(now())
+
+  verification LandlordVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+
+  @@index([verificationId])
 }
 
 model Property {
@@ -88,6 +189,7 @@ model Property {
   landlord      User           @relation(fields: [landlordId], references: [id])
   units         Unit[]
   conversations Conversation[]
+  photos        PropertyPhoto[]
 
   @@index([landlordId])
   @@index([city, area])
@@ -103,12 +205,24 @@ model Unit {
   rentAmount    Decimal       @db.Decimal(14, 2)
   rentFrequency RentFrequency @default(ANNUAL)
   description   String?
+  // One-off costs on top of the rent. Null means the landlord has not said, which
+  // the public pages show as "Ask landlord"; 0 means there is no such fee.
+  cautionDeposit Decimal?     @db.Decimal(14, 2)
+  agreementFee   Decimal?     @db.Decimal(14, 2)
+  serviceCharge  Decimal?     @db.Decimal(14, 2)
+  agencyFee      Decimal?     @db.Decimal(14, 2)
+  // The last time the landlord said this flat is still available. A vacant flat
+  // that has gone too long without it stops being offered (see availability.ts).
+  availabilityConfirmedAt DateTime @default(now())
+  // For a flat that is let now but will be free on this date.
+  availableFrom DateTime?     @db.Date
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   property  Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   tenancies Tenancy[]
     inspectionRequests InspectionRequest[]
+  photos    PropertyPhoto[]
 
   @@unique([propertyId, label])
   @@index([propertyId])
@@ -251,6 +365,11 @@ enum InspectionStatus {
   COMPLETED
   DECLINED
   CONVERTED
+  // Ended by the visitor before it happened.
+  CANCELLED
+  // The date passed and one side did not turn up.
+  NO_SHOW_VISITOR
+  NO_SHOW_LANDLORD
 }
 
 // Raised by a tenant, managed by the landlord.
@@ -287,12 +406,23 @@ model InspectionRequest {
   status             InspectionStatus @default(PENDING)
   landlordNote       String?
   convertedTenancyId String?          @unique @db.Uuid
+  // The signed-in person who asked. Null on older requests made before an account
+  // was needed. While set, their phone and email stay hidden from the landlord
+  // until the landlord accepts.
+  requesterId        String?          @db.Uuid
+  // The rent as it was when they asked, so a later change can be pointed out to them.
+  rentAmount         Decimal?         @db.Decimal(14, 2)
+  rentFrequency      RentFrequency?
+  rescheduleCount    Int              @default(0)
+  cancelledAt        DateTime?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
   unit             Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
   convertedTenancy Tenancy? @relation(fields: [convertedTenancyId], references: [id])
+  requester        User?    @relation("InspectionRequester", fields: [requesterId], references: [id], onDelete: SetNull)
 
+  @@index([requesterId])
   @@index([unitId])
   @@index([status])
 }

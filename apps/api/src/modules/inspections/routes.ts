@@ -26,6 +26,7 @@ inspectionsRouter.post(
   asyncHandler(inspectionController.decline),
 );
 inspectionsRouter.post("/:inspectionId/complete", asyncHandler(inspectionController.complete));
+inspectionsRouter.post("/:inspectionId/no-show", asyncHandler(inspectionController.noShow));
 inspectionsRouter.post(
   "/:inspectionId/convert",
   validate(convertInspectionSchema),

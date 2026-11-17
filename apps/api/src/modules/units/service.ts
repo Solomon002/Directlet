@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { availabilityState, daysSince } from "../../lib/availability";
 import type { CreateUnitInput, UpdateUnitInput } from "@directlet/shared";
 
 async function assertOwnsProperty(landlordId: string, propertyId: string) {
@@ -13,12 +14,43 @@ async function assertOwnsProperty(landlordId: string, propertyId: string) {
   }
 }
 
+// Tells the landlord how fresh a flat's "still available" is.
+export function withAvailability<T extends { availabilityConfirmedAt: Date }>(unit: T) {
+  return {
+    ...unit,
+    availability: {
+      state: availabilityState(unit.availabilityConfirmedAt),
+      daysSinceConfirmed: daysSince(unit.availabilityConfirmedAt),
+    },
+  };
+}
+
 export async function listUnits(landlordId: string, propertyId: string) {
   await assertOwnsProperty(landlordId, propertyId);
-  return prisma.unit.findMany({
+  const units = await prisma.unit.findMany({
     where: { propertyId },
     orderBy: { label: "asc" },
   });
+  return units.map(withAvailability);
+}
+
+// "Still available": one tap that vouches for a flat again.
+export async function confirmAvailability(landlordId: string, propertyId: string, unitId: string) {
+  await getOwnedUnit(landlordId, propertyId, unitId);
+  const unit = await prisma.unit.update({
+    where: { id: unitId },
+    data: { availabilityConfirmedAt: new Date() },
+  });
+  return withAvailability(unit);
+}
+
+export async function confirmAllAvailability(landlordId: string, propertyId: string) {
+  await assertOwnsProperty(landlordId, propertyId);
+  const { count } = await prisma.unit.updateMany({
+    where: { propertyId },
+    data: { availabilityConfirmedAt: new Date() },
+  });
+  return { confirmed: count };
 }
 
 export async function createUnit(landlordId: string, propertyId: string, input: CreateUnitInput) {

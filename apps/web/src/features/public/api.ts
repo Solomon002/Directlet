@@ -1,4 +1,10 @@
 import { api } from "../../lib/api";
+import { API_URL } from "../../lib/authApi";
+
+// A picture is a plain image address, so <img> can load it and browsers cache it.
+export function photoUrl(photoId: string) {
+  return `${API_URL}/public/photos/${photoId}`;
+}
 
 export type PublicUnit = {
   id: string;
@@ -8,8 +14,29 @@ export type PublicUnit = {
   rentAmount: string;
   rentFrequency: string;
   description: string | null;
+  // AVAILABLE can be viewed now. UNCONFIRMED is vacant, but the landlord has not
+  // vouched for it lately. LET has a tenant.
+  availability: "AVAILABLE" | "UNCONFIRMED" | "LET";
   isVacant: boolean;
+  availabilityConfirmedDaysAgo: number;
+  availableFrom: string | null;
+  fees: { key: string; label: string; amount: string | null }[];
+  unstatedFees: string[];
+  // Rent plus every fee the landlord has stated: the first payment.
+  moveInTotal: string;
 };
+
+export type PublicLandlord =
+  | { verified: false }
+  | {
+      verified: true;
+      landlordType: "INDIVIDUAL" | "COMPANY";
+      verifiedAt: string | null;
+      // Companies only.
+      cacType?: "RC" | "BN" | "IT" | null;
+      cacNumber?: string | null;
+      registeredName?: string | null;
+    };
 
 export type PublicProperty = {
   id: string;
@@ -21,6 +48,13 @@ export type PublicProperty = {
   description: string | null;
   latitude: number | null;
   longitude: number | null;
+  landlord: PublicLandlord;
+  // List: the cover and how many pictures. Detail: all of them, cover first.
+  coverPhotoId?: string | null;
+  photoCount?: number;
+  photos?: { id: string; unitId: string | null }[];
+  // Listing list only: how long ago the landlord last vouched for the flats on offer.
+  availabilityConfirmedDaysAgo?: number | null;
   // Listing-card summary (list endpoint only), from the vacant flats when there
   // are any, otherwise from all flats.
   bedroomsMin?: number | null;

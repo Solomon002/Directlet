@@ -74,9 +74,14 @@ Check "Browse shows 1 of 2 flats vacant" ($listing.vacantUnitCount -eq 1 -and $l
 $otherCity = (Invoke-RestMethod -Uri "$apiBase/public/properties?city=abuja&pageSize=50").properties | Where-Object { $_.id -eq $property.id }
 Check "Browse filter (city=abuja) excludes it" ($null -eq $otherCity) ""
 
-$viewing = @{ name = "Visitor"; email = "visitor.$suffix@example.com"; phone = "08012345678" } | ConvertTo-Json
-Expect-Status "Viewing request for a let flat is blocked" 409 { Invoke-RestMethod -Uri "$apiBase/public/units/$($unitA.id)/inspection-requests" -Method Post -ContentType $json -Body $viewing }
-$okViewing = Invoke-RestMethod -Uri "$apiBase/public/units/$($unitB.id)/inspection-requests" -Method Post -ContentType $json -Body $viewing
+# Viewing requests need an account, so the visitor signs up as a house hunter first.
+$visitorEmail = "vtest.visitor.$suffix@example.com"
+Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType $json -Body (@{ fullName = "Visitor"; email = $visitorEmail; password = $testPassword; accountType = "HUNTER" } | ConvertTo-Json) | Out-Null
+$visitorLogin = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType $json -Body (@{ email = $visitorEmail; password = $testPassword } | ConvertTo-Json)
+$vh = @{ Authorization = "Bearer $($visitorLogin.accessToken)" }
+$viewing = @{ phone = "08012345678" } | ConvertTo-Json
+Expect-Status "Viewing request for a let flat is blocked" 409 { Invoke-RestMethod -Uri "$apiBase/public/units/$($unitA.id)/inspection-requests" -Method Post -ContentType $json -Headers $vh -Body $viewing }
+$okViewing = Invoke-RestMethod -Uri "$apiBase/public/units/$($unitB.id)/inspection-requests" -Method Post -ContentType $json -Headers $vh -Body $viewing
 Check "Viewing request for a vacant flat works" ($null -ne $okViewing.inspectionRequest.id) ""
 
 # --- Proof of payment ---

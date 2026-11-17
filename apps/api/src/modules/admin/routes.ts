@@ -5,7 +5,9 @@ import { requireRole } from "../../middleware/requireRole";
 import { validate } from "../../middleware/validate";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/AppError";
+import { rejectVerificationSchema } from "@directlet/shared";
 import * as adminService from "./service";
+import * as verificationService from "../verification/service";
 
 export const adminRouter = Router();
 
@@ -99,6 +101,45 @@ adminRouter.post(
   asyncHandler(async (req: Request, res: Response) => {
     await adminService.setPropertyHidden(req.params.propertyId as string, false);
     res.status(200).json({ property: { id: req.params.propertyId } });
+  }),
+);
+
+// --- Landlord verification ---
+
+const verificationStatusSchema = z.enum(["PENDING", "VERIFIED", "REJECTED"]);
+
+adminRouter.get(
+  "/verifications",
+  asyncHandler(async (req: Request, res: Response) => {
+    const status = req.query.status ? verificationStatusSchema.safeParse(req.query.status) : null;
+    if (status && !status.success) {
+      throw new AppError(400, "Unknown status", "VALIDATION_ERROR");
+    }
+    res.status(200).json(await verificationService.listForAdmin({ status: status?.data, page: page(req) }));
+  }),
+);
+
+adminRouter.get(
+  "/verifications/:id",
+  asyncHandler(async (req: Request, res: Response) => {
+    res.status(200).json({ verification: await verificationService.getForAdmin(req.params.id as string) });
+  }),
+);
+
+adminRouter.post(
+  "/verifications/:id/approve",
+  asyncHandler(async (req: Request, res: Response) => {
+    await verificationService.approve(req.user!.sub, req.params.id as string);
+    res.status(200).json({ verification: { id: req.params.id } });
+  }),
+);
+
+adminRouter.post(
+  "/verifications/:id/reject",
+  validate(rejectVerificationSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    await verificationService.reject(req.user!.sub, req.params.id as string, req.body.reason);
+    res.status(200).json({ verification: { id: req.params.id } });
   }),
 );
 

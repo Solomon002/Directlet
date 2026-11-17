@@ -20,6 +20,8 @@ import { conversationsRouter } from "./modules/conversations/routes";
 import { analyticsRouter } from "./modules/analytics/routes";
 import { adminRouter } from "./modules/admin/routes";
 import { jobsRouter } from "./modules/jobs/routes";
+import { verificationRouter } from "./modules/verification/routes";
+import { viewingsRouter } from "./modules/viewings/routes";
 
 export const app = express();
 
@@ -57,6 +59,8 @@ app.use("/dashboard", dashboardRouter);
 app.use("/reminders", remindersRouter);
 app.use("/conversations", noStore, conversationsRouter);
 app.use("/analytics", analyticsRouter);
+app.use("/verification", noStore, verificationRouter);
+app.use("/viewings", noStore, viewingsRouter);
 app.use("/admin", noStore, adminRouter);
 app.use("/jobs", noStore, jobsRouter);
 

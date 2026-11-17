@@ -14,11 +14,24 @@ $unit = Invoke-RestMethod -Uri "$apiBase/properties/$propertyId/units" -Method P
 $unitId = $unit.unit.id
 Write-Host "=== Test unit created: $unitId ==="
 
-$reqA = Invoke-RestMethod -Uri "$apiBase/public/units/$unitId/inspection-requests" -Method Post -ContentType "application/json" -Body (@{ name = "Visitor A"; email = "visitora@example.com"; phone = "08010000001"; message = "Interested, can view weekends"; preferredDate = (Get-Date).AddDays(3).ToString("yyyy-MM-dd") } | ConvertTo-Json)
-$reqB = Invoke-RestMethod -Uri "$apiBase/public/units/$unitId/inspection-requests" -Method Post -ContentType "application/json" -Body (@{ name = "Visitor B"; email = "visitorb@example.com"; phone = "08010000002" } | ConvertTo-Json)
-$reqC = Invoke-RestMethod -Uri "$apiBase/public/units/$unitId/inspection-requests" -Method Post -ContentType "application/json" -Body (@{ name = "Visitor C"; email = "visitorc@example.com"; phone = "08010000003" } | ConvertTo-Json)
-$reqD = Invoke-RestMethod -Uri "$apiBase/public/units/$unitId/inspection-requests" -Method Post -ContentType "application/json" -Body (@{ name = "Visitor D"; email = "visitord@example.com"; phone = "08010000004" } | ConvertTo-Json)
-Write-Host "=== 4 public inspection requests submitted (no auth) ==="
+# Viewing requests now need an account, so each visitor signs up as a house hunter first.
+$visitorPassword = "Tp-" + [guid]::NewGuid().ToString("N")
+$visitorSuffix = Get-Random
+function New-Visitor($name) {
+  $handle = $name.ToLower() -replace "\s", ""
+  $email = "vtest.$handle.$visitorSuffix@example.com"
+  Invoke-RestMethod -Uri "$apiBase/auth/register" -Method Post -ContentType "application/json" -Body (@{ fullName = $name; email = $email; password = $visitorPassword; accountType = "HUNTER" } | ConvertTo-Json) | Out-Null
+  $login = Invoke-RestMethod -Uri "$apiBase/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = $visitorPassword } | ConvertTo-Json)
+  return @{ Authorization = "Bearer $($login.accessToken)" }
+}
+function Request-Viewing($headers, $body) {
+  return Invoke-RestMethod -Uri "$apiBase/public/units/$unitId/inspection-requests" -Method Post -ContentType "application/json" -Headers $headers -Body ($body | ConvertTo-Json)
+}
+$reqA = Request-Viewing (New-Visitor "Visitor A") @{ phone = "08010000001"; message = "Interested, can view weekends"; preferredDate = (Get-Date).AddDays(3).ToString("yyyy-MM-dd") }
+$reqB = Request-Viewing (New-Visitor "Visitor B") @{ phone = "08010000002" }
+$reqC = Request-Viewing (New-Visitor "Visitor C") @{ phone = "08010000003" }
+$reqD = Request-Viewing (New-Visitor "Visitor D") @{ phone = "08010000004" }
+Write-Host "=== 4 viewing requests submitted by signed-in visitors ==="
 
 $schedule = Invoke-RestMethod -Uri "$apiBase/inspections/$($reqA.inspectionRequest.id)/schedule" -Method Post -ContentType "application/json" -Headers $landlordHeaders -WebSession $landlordSession -Body (@{ scheduledFor = (Get-Date).AddDays(1).ToString("yyyy-MM-dd") } | ConvertTo-Json)
 Write-Host "=== Visitor A scheduled ==="
@@ -28,6 +41,8 @@ $decline = Invoke-RestMethod -Uri "$apiBase/inspections/$($reqB.inspectionReques
 Write-Host "=== Visitor B declined ==="
 $decline | ConvertTo-Json -Depth 6
 
+# A viewing has to be scheduled before it can be marked complete.
+Invoke-RestMethod -Uri "$apiBase/inspections/$($reqC.inspectionRequest.id)/schedule" -Method Post -ContentType "application/json" -Headers $landlordHeaders -WebSession $landlordSession -Body (@{ scheduledFor = (Get-Date).ToString("yyyy-MM-dd") } | ConvertTo-Json) | Out-Null
 $complete = Invoke-RestMethod -Uri "$apiBase/inspections/$($reqC.inspectionRequest.id)/complete" -Method Post -Headers $landlordHeaders -WebSession $landlordSession
 Write-Host "=== Visitor C marked complete ==="
 $complete | ConvertTo-Json -Depth 6
