@@ -42,7 +42,6 @@ the routes, and a daily job that issues the next rent charges.
 | `RESEND_API_KEY` | *(optional)* From resend.com. Switches on real emails: confirming addresses, viewing notices and reminders |
 | `EMAIL_FROM` | *(optional)* Who emails come from, e.g. `DirectLet <hello@yourdomain.com>`. The default only delivers to your own address, so verify your domain in Resend first |
 | `HCAPTCHA_SITEKEY`, `HCAPTCHA_SECRET` | *(optional)* From hcaptcha.com. Switches on the "select the images that contain..." robot check on sign-up. Set both. The site key is public, the secret is not |
-| `VITE_DEMO_LANDLORD_PASSWORD`, `VITE_DEMO_TENANT_PASSWORD` | *(optional)* Show the demo passwords on the login page. Anything set here is visible to everyone |
 
 Make a random string with:
 

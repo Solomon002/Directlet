@@ -6,23 +6,6 @@ import { homePathFor } from "../../lib/roles";
 import { useAuthStore } from "../../stores/authStore";
 import Brand from "../../features/nav/Brand";
 
-// Demo accounts for testers. The passwords are not kept in the code: set
-// VITE_DEMO_LANDLORD_PASSWORD and VITE_DEMO_TENANT_PASSWORD where the site is built
-// (e.g. in Vercel) to show them here and fill them in with one tap. Without them the
-// box still lists the emails.
-const DEMO_ACCOUNTS = [
-  {
-    role: "Landlord",
-    email: "demo@directlet.ng",
-    password: import.meta.env.VITE_DEMO_LANDLORD_PASSWORD as string | undefined,
-  },
-  {
-    role: "Tenant",
-    email: "demo.tenant@directlet.ng",
-    password: import.meta.env.VITE_DEMO_TENANT_PASSWORD as string | undefined,
-  },
-];
-
 const INPUT_CLASS =
   "w-full rounded-lg border border-mist bg-white p-3 font-sans text-ink placeholder:text-ink/40 transition focus:border-trust-blue focus:outline-none focus:ring-2 focus:ring-trust-blue";
 
@@ -73,33 +56,6 @@ export default function Login() {
         <div className="w-full max-w-sm">
           <h1 className="font-display text-3xl font-extrabold text-night-blue sm:text-4xl">Log in</h1>
           <p className="mt-2 font-sans text-sm text-ink/70">Welcome back. Enter your details to continue.</p>
-
-          <div className="mt-6 rounded-lg bg-gray-100 p-3 font-sans text-xs text-gray-600">
-            <p className="font-bold uppercase tracking-wide text-gray-500">Demo accounts</p>
-            <ul className="mt-2 flex flex-col gap-2">
-              {DEMO_ACCOUNTS.map((account) => (
-                <li key={account.role} className="flex items-center justify-between gap-2">
-                  <span className="min-w-0">
-                    <span className="font-bold text-gray-700">{account.role}:</span>{" "}
-                    <span className="break-all">
-                      {account.email}
-                      {account.password ? ` / ${account.password}` : ""}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail(account.email);
-                      setPassword(account.password ?? "");
-                    }}
-                    className="shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1 font-bold text-trust-blue transition hover:bg-gray-50"
-                  >
-                    Fill
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
 
           <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-5">
             <div>
