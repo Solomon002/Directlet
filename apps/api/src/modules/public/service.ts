@@ -5,6 +5,7 @@ import { availabilityState, daysSince } from "../../lib/availability";
 import { emailEnabled } from "../../lib/email";
 import { notifyLandlordOfRequest } from "../../lib/notify";
 import { publicSummary, ratingsFor } from "../reviews/service";
+import { byLabel } from "../../lib/naturalOrder";
 import {
   MAX_ACTIVE_REQUESTS_PER_USER,
   RESTRICT_AFTER_MISSED,
@@ -256,7 +257,7 @@ export async function getPublicProperty(propertyId: string) {
     ...rest,
     reviews,
     landlord: publicLandlord(landlord.verification),
-    units: units.map(({ _count, cautionDeposit, agreementFee, serviceCharge, agencyFee, ...unit }) => {
+    units: [...units].sort(byLabel).map(({ _count, cautionDeposit, agreementFee, serviceCharge, agencyFee, ...unit }) => {
       const availability = unitAvailability({ _count, availabilityConfirmedAt: unit.availabilityConfirmedAt });
       return {
         ...unit,

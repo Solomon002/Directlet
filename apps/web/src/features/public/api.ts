@@ -94,7 +94,7 @@ type ListResponse = {
   pageSize: number;
 };
 
-export async function listPublicProperties(params?: { city?: string; area?: string }) {
+export async function listPublicProperties(params?: { city?: string; area?: string; page?: number }) {
   const res = await api.get<ListResponse>("/public/properties", { params });
   return res.data;
 }

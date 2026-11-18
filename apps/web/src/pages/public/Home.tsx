@@ -1,3 +1,4 @@
+import { bedroomRange } from "../../lib/rooms";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { listPublicProperties, type PublicProperty } from "../../features/public/api";
@@ -28,11 +29,6 @@ const TICKER = [
   "A receipt for every payment",
   "No agent wahala",
 ];
-
-function bedrooms(min?: number | null, max?: number | null) {
-  if (min == null || max == null) return null;
-  return min === max ? `${min} bed` : `${min}-${max} bed`;
-}
 
 function Check() {
   return (
@@ -396,7 +392,7 @@ function Featured({ properties }: { properties: PublicProperty[] }) {
                   <p className="font-display text-lg font-extrabold text-night-blue">{p.name}</p>
                   <p className="text-sm text-ink/70">
                     {p.area}, {p.city}
-                    {bedrooms(p.bedroomsMin, p.bedroomsMax) ? ` / ${bedrooms(p.bedroomsMin, p.bedroomsMax)}` : ""}
+                    {bedroomRange(p.bedroomsMin, p.bedroomsMax) ? ` / ${bedroomRange(p.bedroomsMin, p.bedroomsMax)}` : ""}
                   </p>
                   {p.priceFrom && (
                     <p className="mt-2 font-display font-extrabold text-trust-blue">

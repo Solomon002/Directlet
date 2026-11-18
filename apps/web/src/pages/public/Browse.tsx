@@ -9,18 +9,14 @@ import { useAuthStore } from "../../stores/authStore";
 import { formatRent } from "../../lib/money";
 import { VerifiedBadge, confirmedText } from "../../features/verification/Badge";
 import Stars from "../../features/trust/Stars";
-
-function bedroomText(min?: number | null, max?: number | null) {
-  if (min == null || max == null) return null;
-  return min === max ? `${min} bed` : `${min}-${max} bed`;
-}
+import { bedroomRange } from "../../lib/rooms";
 
 // Follows the brand manual's listing card: title, "Area, city / beds",
 // "price / year", then Message owner. The badge shows whether the owner has been
 // verified, and the list puts verified owners first.
 function ListingCard({ property }: { property: PublicProperty }) {
   const user = useAuthStore((s) => s.user);
-  const beds = bedroomText(property.bedroomsMin, property.bedroomsMax);
+  const beds = bedroomRange(property.bedroomsMin, property.bedroomsMax);
   const vacant = property.vacantUnitCount ?? 0;
   const hasRange = vacant > 1 || (vacant === 0 && (property.unitCount ?? 0) > 1);
 
@@ -104,6 +100,9 @@ export default function Browse() {
   const [cityDraft, setCityDraft] = useState(city);
   const [areaDraft, setAreaDraft] = useState(area);
   const [properties, setProperties] = useState<PublicProperty[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -115,6 +114,8 @@ export default function Browse() {
         const data = await listPublicProperties({ city: city || undefined, area: area || undefined });
         // An unexpected reply (not a list) shows as "no listings" instead of crashing.
         setProperties(Array.isArray(data.properties) ? data.properties : []);
+        setTotal(data.total ?? 0);
+        setPage(1);
       } catch (err) {
         setLoadError(parseApiError(err).message);
       } finally {
@@ -122,6 +123,20 @@ export default function Browse() {
       }
     })();
   }, [city, area]);
+
+  // Adds the next page of listings under the ones already shown.
+  async function handleShowMore() {
+    setLoadingMore(true);
+    try {
+      const data = await listPublicProperties({ city: city || undefined, area: area || undefined, page: page + 1 });
+      setProperties((current) => [...current, ...(Array.isArray(data.properties) ? data.properties : [])]);
+      setPage(page + 1);
+    } catch (err) {
+      setLoadError(parseApiError(err).message);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   function handleSearch(e: FormEvent) {
     e.preventDefault();
@@ -257,6 +272,24 @@ export default function Browse() {
           <ListingCard key={property.id} property={property} />
         ))}
       </div>
+
+      {!loading && properties.length > 0 && (
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <p className="text-sm text-ink/70">
+            Showing {properties.length} of {total} compounds
+          </p>
+          {properties.length < total && (
+            <button
+              type="button"
+              disabled={loadingMore}
+              onClick={() => void handleShowMore()}
+              className="rounded-xl border-2 border-trust-blue px-6 py-2.5 font-display font-extrabold text-trust-blue hover:bg-trust-blue/5 disabled:opacity-60"
+            >
+              {loadingMore ? "Loading..." : "Show more"}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

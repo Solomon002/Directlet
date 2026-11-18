@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { availabilityState, daysSince } from "../../lib/availability";
+import { byLabel } from "../../lib/naturalOrder";
 import type { CreateUnitInput, UpdateUnitInput } from "@directlet/shared";
 
 async function assertOwnsProperty(landlordId: string, propertyId: string) {
@@ -31,7 +32,7 @@ export async function listUnits(landlordId: string, propertyId: string) {
     where: { propertyId },
     orderBy: { label: "asc" },
   });
-  return units.map(withAvailability);
+  return [...units].sort(byLabel).map(withAvailability);
 }
 
 // "Still available": one tap that vouches for a flat again.

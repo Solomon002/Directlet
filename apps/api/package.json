@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
     "jobs:rent-roll": "tsx src/jobs/runRentRoll.ts",
-    "admin:grant": "tsx src/jobs/grantAdmin.ts"
+    "admin:grant": "tsx src/jobs/grantAdmin.ts",
+    "seed:lagos": "tsx prisma/seed-lagos.ts"
   },
   "dependencies": {
     "@directlet/shared": "workspace:*",

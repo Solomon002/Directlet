@@ -8,6 +8,7 @@ import { hasLocation } from "../../features/maps/geo";
 import StartConversation from "../../features/messages/StartConversation";
 import { useAuthStore } from "../../stores/authStore";
 import { formatRent, naira } from "../../lib/money";
+import { bedroomLabel } from "../../lib/rooms";
 import { VerifiedBadge, confirmedText } from "../../features/verification/Badge";
 import ReviewsSection from "../../features/trust/ReviewsSection";
 import ReportListing from "../../features/trust/ReportListing";
@@ -221,7 +222,7 @@ export default function CompoundPage() {
               </span>
             </div>
             <p className="text-sm text-ink">
-              {unit.bedrooms} bed{unit.bathrooms != null ? ` - ${unit.bathrooms} bath` : ""} -{" "}
+              {bedroomLabel(unit.bedrooms)}{unit.bathrooms != null ? ` - ${unit.bathrooms} bath` : ""} -{" "}
               <span className="font-bold text-trust-blue">{formatRent(unit.rentAmount, unit.rentFrequency)}</span>
             </p>
             {unit.availability !== "LET" && <PriceBreakdown unit={unit} />}

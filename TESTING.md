@@ -2,6 +2,21 @@
 
 Test everything on your laptop first, then repeat the short "on the live site" checks.
 
+## Sample data (Lagos landlords, compounds, flats, tenants)
+
+The live database currently holds sample data so the site looks real: 30 landlords (20 verified), about
+88 compounds at real Lagos areas, about 2,300 flats (self-contained, 1, 2 and 3 bedroom), and tenants with
+rent, receipts, complaints and reviews. Names, compounds, phone numbers and prices are made up. Every
+sample account has an email ending in `@sample.invalid`.
+
+```powershell
+pnpm --filter @directlet/api seed:lagos               # add it (refuses if it is already there)
+pnpm --filter @directlet/api seed:lagos -- --remove   # delete exactly that data, nothing else
+```
+
+Logins and the shared password are written to `appsapi.seed-lagos-login.txt` (ignored by git). The
+"verified" landlords have no uploaded documents. **Remove the sample data before real visitors arrive.**
+
 ## Start it on your laptop
 
 Your other project uses ports 4000 and 5173, so DirectLet uses 4100 and 5199.

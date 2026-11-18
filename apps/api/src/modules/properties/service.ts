@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { availabilityState } from "../../lib/availability";
+import { byLabel } from "../../lib/naturalOrder";
 import { withAvailability } from "../units/service";
 import type { CreatePropertyInput, UpdatePropertyInput } from "@directlet/shared";
 
@@ -49,7 +50,7 @@ export async function getMyProperty(landlordId: string, propertyId: string) {
 
   return {
     ...property,
-    units: property.units.map(({ _count, ...unit }) => ({
+    units: [...property.units].sort(byLabel).map(({ _count, ...unit }) => ({
       ...withAvailability(unit),
       // Only a flat with no tenant needs vouching for.
       occupied: _count.tenancies > 0,

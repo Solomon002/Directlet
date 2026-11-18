@@ -17,6 +17,7 @@ import PhotoManager from "../../features/photos/PhotoManager";
 import LandlordReviews from "../../features/trust/LandlordReviews";
 import { parseApiError } from "../../lib/errors";
 import { formatRent } from "../../lib/money";
+import { bedroomLabel } from "../../lib/rooms";
 import { PlaceMap } from "../../features/maps/Maps";
 import { LocationPicker } from "../../features/maps/LocationTools";
 import { hasLocation, type LatLng } from "../../features/maps/geo";
@@ -104,7 +105,7 @@ function UnitForm({
       </label>
       <div className="flex gap-3">
         <label className={`${labelClass} flex-1`}>
-          Bedrooms
+          Bedrooms <span className="font-normal text-ink/60">(0 = self-contained)</span>
           <input
             type="number"
             min={0}
@@ -492,7 +493,7 @@ export default function PropertyDetail() {
               <div>
                 <p className="font-display font-extrabold text-night-blue">{unit.label}</p>
                 <p className="text-sm text-ink">
-                  {unit.bedrooms} bed{unit.bathrooms != null ? ` - ${unit.bathrooms} bath` : ""} -{" "}
+                  {bedroomLabel(unit.bedrooms)}{unit.bathrooms != null ? ` - ${unit.bathrooms} bath` : ""} -{" "}
                   {formatRent(unit.rentAmount, unit.rentFrequency)}
                 </p>
                 {unit.occupied ? (
